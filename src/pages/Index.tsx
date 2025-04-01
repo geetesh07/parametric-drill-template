@@ -1,0 +1,426 @@
+import React, { useState } from 'react';
+import DrillViewer from '@/components/DrillViewer';
+import ParameterInput from '@/components/ParameterInput';
+import ExportDialog from '@/components/ExportDialog';
+import WebGLTest from '@/components/WebGLTest';
+import { Button } from '@/components/ui/button';
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from '@/components/ui/tabs';
+import { exportDrillModel } from '@/lib/exportUtils';
+import { DrillParameters } from '@/types/drill';
+import { 
+  Box, 
+  Grid2X2, 
+  Info, 
+  FileDown, 
+  Settings2, 
+  RefreshCw, 
+  Layers3,
+  Home,
+  Wrench,
+  BookOpen,
+  HelpCircle
+} from 'lucide-react';
+import { toast } from "sonner";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+
+const Index = () => {
+  // State for drill parameters
+  const [parameters, setParameters] = useState<DrillParameters>({
+    diameter: 10,
+    length: 85.5, // Initial length is sum of default components
+    shankDiameter: 10,
+    shankLength: 40,
+    fluteCount: 2,
+    fluteLength: 45,
+    nonCuttingLength: 0,
+    tipAngle: 118,
+    helixAngle: 30,
+    tolerance: 'h8',
+    material: 'hss',
+    surfaceFinish: 'polished'
+  });
+
+  // State for view mode
+  const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
+  const [wireframe, setWireframe] = useState(false);
+  
+  // State for export dialog
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+
+  // State for active section
+  const [activeSection, setActiveSection] = useState('designer');
+
+  // State for WebGL test
+  const [showWebGLTest, setShowWebGLTest] = useState(false);
+
+  // Handle parameter reset
+  const handleReset = () => {
+    setParameters({
+      diameter: 10,
+      length: 85.5, // Reset to initial sum
+      shankDiameter: 10,
+      shankLength: 40,
+      fluteCount: 2,
+      fluteLength: 45,
+      nonCuttingLength: 0,
+      tipAngle: 118,
+      helixAngle: 30,
+      tolerance: 'h8',
+      material: 'hss',
+      surfaceFinish: 'polished'
+    });
+    
+    toast.success("Parameters reset to default values");
+  };
+
+  // Handle export
+  const handleExport = () => {
+    setIsExportDialogOpen(true);
+  };
+
+  // Handle actual export after dialog confirmation
+  const handleExportConfirm = (format: string, filename: string) => {
+    exportDrillModel(parameters, format, filename);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header */}
+      <header className="w-full py-3 px-6 border-b border-border/40 flex items-center justify-between bg-card/30">
+        <div className="flex items-center gap-2">
+          <Wrench className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-light tracking-tight">Drill Designer Pro</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowWebGLTest(!showWebGLTest)}
+          >
+            {showWebGLTest ? 'Hide WebGL Test' : 'Show WebGL Test'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveSection('home')}>
+            <Home size={16} className="mr-1" />
+            Home
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveSection('designer')}>
+            <Wrench size={16} className="mr-1" />
+            Designer
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveSection('documentation')}>
+            <BookOpen size={16} className="mr-1" />
+            Documentation
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setActiveSection('settings')}>
+            <Settings2 size={16} className="mr-1" />
+            Settings
+          </Button>
+        </div>
+      </header>
+
+      {showWebGLTest && <WebGLTest />}
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col">
+        {/* Home section */}
+        {activeSection === 'home' && (
+          <div className="p-6 max-w-screen-xl mx-auto w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Design Precision Drill Bits with Ease
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Create and customize drill bits with our parametric design tool. 
+                  Export to various formats for manufacturing or integration into your projects.
+                </p>
+                <div className="flex gap-4">
+                  <Button size="lg" onClick={() => setActiveSection('designer')} className="gap-2">
+                    <Wrench size={18} />
+                    Start Designing
+                  </Button>
+                  <Button size="lg" variant="outline" onClick={() => setActiveSection('documentation')} className="gap-2">
+                    <BookOpen size={18} />
+                    Learn More
+                  </Button>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 rounded-xl p-6 shadow-lg border border-border/40 h-80 flex items-center justify-center">
+                <DrillViewer parameters={parameters} viewMode="3d" />
+              </div>
+              
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Layers3 className="h-5 w-5 text-primary" />
+                      Parametric Design
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>Create custom drill bits by adjusting all critical parameters including dimensions, flute count, helix angle, and more.</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileDown className="h-5 w-5 text-primary" />
+                      Multiple Export Formats
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>Export your designs in STL, DWG, STEP, or PDF formats for manufacturing, documentation, or further design work.</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Grid2X2 className="h-5 w-5 text-primary" />
+                      2D & 3D Visualization
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>View your designs in both 2D technical drawing view and interactive 3D model with proper dimensions and tolerances.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Designer section */}
+        {activeSection === 'designer' && (
+          <main className="flex-1 p-4 flex flex-col lg:flex-row gap-4 max-w-screen-2xl mx-auto w-full">
+            {/* Left panel - Parameters */}
+            <div className="w-full lg:w-[300px] flex flex-col gap-4">
+              <ParameterInput 
+                parameters={parameters}
+                onParameterChange={(key, value) => {
+                  setParameters(prev => ({
+                    ...prev,
+                    [key]: value
+                  }));
+                }}
+                onExport={handleExport}
+                onReset={handleReset}
+              />
+              
+              <div className="p-3 rounded-lg mt-auto border border-border/40 bg-card/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-medium">Project Info</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Parametric drill designer with export capabilities. 
+                  Adjust parameters and view real-time changes in 3D or 2D.
+                </p>
+              </div>
+            </div>
+
+            {/* Right panel - Visualization */}
+            <div className="flex-1 rounded-xl border border-border/40 overflow-hidden flex flex-col bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900/50 dark:to-blue-900/30">
+              <div className="border-b border-border/40 p-3 flex items-center justify-between bg-card/20">
+                <h2 className="text-lg font-medium">
+                  Drill Preview
+                </h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWireframe(!wireframe)}
+                    className={`gap-1 ${wireframe ? 'bg-primary/10' : ''}`}
+                  >
+                    <Layers3 className="w-3.5 h-3.5" />
+                    <span>Wireframe</span>
+                  </Button>
+                  <Tabs 
+                    value={viewMode} 
+                    onValueChange={(v) => setViewMode(v as '3d' | '2d')}
+                    className="w-auto"
+                  >
+                    <TabsList>
+                      <TabsTrigger value="3d" className="gap-1">
+                        <Box className="w-3.5 h-3.5" />
+                        <span>3D View</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="2d" className="gap-1">
+                        <Grid2X2 className="w-3.5 h-3.5" />
+                        <span>2D View</span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+              </div>
+              
+              <div className="flex-1 min-h-[70vh]">
+                <DrillViewer
+                  parameters={parameters}
+                  viewMode={viewMode}
+                  wireframe={wireframe}
+                />
+              </div>
+            </div>
+          </main>
+        )}
+
+        {/* Documentation Content */}
+        {activeSection === 'documentation' && (
+          <div className="p-6 max-w-screen-xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Drill Design Guide</CardTitle>
+                  <CardDescription>
+                    Learn about the key parameters and terminology for drill design
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <h3 className="text-base font-medium">Key Dimensions</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                    <li><strong>Diameter:</strong> The cutting diameter of the drill</li>
+                    <li><strong>Overall Length:</strong> Total length from tip to end of shank</li>
+                    <li><strong>Flute Length:</strong> The length of the helical cutting flutes</li>
+                    <li><strong>Shank Length:</strong> The length of the straight portion for clamping</li>
+                  </ul>
+                  
+                  <h3 className="text-base font-medium mt-4">Geometrical Features</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                    <li><strong>Helix Angle:</strong> The angle of the flute helix, typically 30° for general purpose</li>
+                    <li><strong>Point Angle:</strong> The included angle of the tip, typically 118° for general purpose</li>
+                    <li><strong>Flute Count:</strong> Number of flutes, affects chip evacuation and hole finish</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Export Options</CardTitle>
+                  <CardDescription>
+                    Available file formats and their applications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <h3 className="text-base font-medium">Available Formats</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                    <li><strong>STL:</strong> 3D model for 3D printing and visualization</li>
+                    <li><strong>DWG/DXF:</strong> 2D technical drawings for CAD software</li>
+                    <li><strong>STEP:</strong> 3D CAD model with full feature information</li>
+                    <li><strong>PDF:</strong> Technical drawing with dimensions and specifications</li>
+                  </ul>
+                  
+                  <h3 className="text-base font-medium mt-4">Usage Tips</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                    <li>Use STL for quick 3D printing or visualization</li>
+                    <li>Use STEP for importing into CAD software for further design</li>
+                    <li>Use DWG/DXF for 2D technical drawings and manufacturing</li>
+                    <li>Use PDF for documentation and sharing with non-CAD users</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Application Guide</CardTitle>
+                  <CardDescription>
+                    Best practices for different drilling applications
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <h3 className="text-base font-medium">General Purpose</h3>
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                        <li>118° point angle</li>
+                        <li>30° helix angle</li>
+                        <li>2 flutes</li>
+                        <li>HSS material</li>
+                        <li>h8 tolerance</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="text-base font-medium">Hard Materials</h3>
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                        <li>135° point angle</li>
+                        <li>25-30° helix angle</li>
+                        <li>3-4 flutes</li>
+                        <li>Carbide or Cobalt material</li>
+                        <li>h7 tolerance</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="text-base font-medium">Deep Hole Drilling</h3>
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                        <li>118-135° point angle</li>
+                        <li>35-40° helix angle</li>
+                        <li>1-2 flutes</li>
+                        <li>HSS with TiN coating</li>
+                        <li>h8/h9 tolerance</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Content */}
+        {activeSection === 'settings' && (
+          <div className="p-6 max-w-screen-xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Application Settings</CardTitle>
+                <CardDescription>
+                  Configure application behavior and defaults
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  Settings functionality will be available in future updates. This will include:
+                </p>
+                <ul className="list-disc pl-5 mt-4 space-y-2 text-sm text-muted-foreground">
+                  <li>Default parameter presets</li>
+                  <li>Unit system selection (metric/imperial)</li>
+                  <li>Custom material definitions</li>
+                  <li>Export format preferences</li>
+                  <li>Visualization options</li>
+                  <li>Cloud syncing preferences</li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="w-full py-3 px-6 border-t border-border/40 text-center text-xs text-muted-foreground bg-card/30">
+        <p>Drill Designer Pro v1.0 - A precision tool design application</p>
+      </footer>
+      
+      {/* Export dialog */}
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        parameters={parameters}
+        onExport={handleExportConfirm}
+      />
+    </div>
+  );
+};
+
+export default Index;
