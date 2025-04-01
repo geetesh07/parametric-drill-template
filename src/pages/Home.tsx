@@ -1,13 +1,17 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import Logo from '@/components/Logo';
 import { Drill, Scissors, Filter, FileStack, Wrench, ArrowRight, Factory, Settings, Award, UserPlus, ArrowRightCircle, LayoutGrid } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const toolTypes = [
     { 
       icon: <Drill className="h-8 w-8 text-blue-500" />, 
@@ -54,6 +58,14 @@ export default function Home() {
     }
   ];
 
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/designer');
+    } else {
+      navigate('/signup');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
@@ -69,11 +81,11 @@ export default function Home() {
                 NTS Tool Solution PRO v5.6.2 helps you create custom drills, endmills, reamers, and step drills with powerful parametric design tools.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
-                <Button size="lg" asChild>
-                  <Link to="/designer">Start Designing <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Button size="lg" onClick={handleGetStarted}>
+                  Start Designing <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="lg" asChild>
-                  <Link to="/signup">Create Account <UserPlus className="ml-2 h-4 w-4" /></Link>
+                  <Link to="/pricing">View Pricing</Link>
                 </Button>
               </div>
             </div>
@@ -117,10 +129,8 @@ export default function Home() {
                   </CardDescription>
                 </CardContent>
                 <CardFooter>
-                  <Button variant="ghost" size="sm" className="gap-1 text-primary" asChild>
-                    <Link to="/designer">
-                      Design Now <ArrowRightCircle className="h-4 w-4" />
-                    </Link>
+                  <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={handleGetStarted}>
+                    Design Now <ArrowRightCircle className="h-4 w-4" />
                   </Button>
                 </CardFooter>
               </Card>
@@ -160,11 +170,11 @@ export default function Home() {
               Start designing precision cutting tools with our easy-to-use parametric design platform.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Button size="lg" asChild>
-                <Link to="/designer">Start Designing Now</Link>
+              <Button size="lg" onClick={handleGetStarted}>
+                Start Designing Now
               </Button>
               <Button variant="outline" size="lg" asChild>
-                <Link to="/signup">Create Free Account</Link>
+                <Link to="/pricing">View Pricing</Link>
               </Button>
             </div>
           </div>

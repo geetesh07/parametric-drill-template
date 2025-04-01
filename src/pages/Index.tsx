@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import DrillViewer from '@/components/DrillViewer';
 import ParameterInput from '@/components/ParameterInput';
 import ExportDialog from '@/components/ExportDialog';
-import WebGLTest from '@/components/WebGLTest';
 import { Button } from '@/components/ui/button';
 import { 
   Tabs, 
@@ -23,8 +22,7 @@ import {
   Layers3,
   Home,
   Wrench,
-  BookOpen,
-  HelpCircle
+  X
 } from 'lucide-react';
 import { toast } from "sonner";
 import { 
@@ -61,9 +59,6 @@ const Index = () => {
 
   // State for active section
   const [activeSection, setActiveSection] = useState('designer');
-
-  // State for WebGL test
-  const [showWebGLTest, setShowWebGLTest] = useState(false);
 
   // Handle parameter reset
   const handleReset = () => {
@@ -229,6 +224,15 @@ const Index = () => {
                   >
                     <Layers3 className="w-3.5 h-3.5" />
                     <span>Wireframe</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                    className="gap-1"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>Export</span>
                   </Button>
                   <Tabs 
                     value={viewMode} 

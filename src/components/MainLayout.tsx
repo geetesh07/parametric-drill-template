@@ -1,10 +1,11 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Drill, User, Menu, X } from 'lucide-react';
+import { Drill, User, Menu, X, LogOut } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -12,7 +13,14 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
+  const location = useLocation();
   
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -23,29 +31,50 @@ export default function MainLayout({ children }: MainLayoutProps) {
             
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link 
+                to="/" 
+                className={`text-sm font-medium transition-colors ${location.pathname === '/' ? 'text-primary font-semibold' : 'hover:text-primary'}`}
+              >
                 Home
               </Link>
-              <Link to="/designer" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link 
+                to="/designer" 
+                className={`text-sm font-medium transition-colors ${location.pathname === '/designer' ? 'text-primary font-semibold' : 'hover:text-primary'}`}
+              >
                 Designer
               </Link>
-              <Link to="/pricing" className="text-sm font-medium hover:text-primary transition-colors">
+              <Link 
+                to="/pricing" 
+                className={`text-sm font-medium transition-colors ${location.pathname === '/pricing' ? 'text-primary font-semibold' : 'hover:text-primary'}`}
+              >
                 Pricing
-              </Link>
-              <Link to="/support" className="text-sm font-medium hover:text-primary transition-colors">
-                Support
               </Link>
             </nav>
             
             {/* Action Buttons */}
             <div className="hidden md:flex items-center space-x-2">
               <ThemeToggle />
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/login">Sign In</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link to="/signup">Get Started</Link>
-              </Button>
+              
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground mr-2">
+                    Hi, {user?.name}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={logout}>
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/login">Sign In</Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link to="/signup">Get Started</Link>
+                  </Button>
+                </>
+              )}
             </div>
             
             {/* Mobile Menu Button */}
@@ -73,43 +102,45 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <div className="container mx-auto px-4 space-y-3">
               <Link 
                 to="/" 
-                className="block text-sm font-medium hover:text-primary py-2"
+                className={`block text-sm font-medium hover:text-primary py-2 ${location.pathname === '/' ? 'text-primary font-semibold' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Home
               </Link>
               <Link 
                 to="/designer" 
-                className="block text-sm font-medium hover:text-primary py-2"
+                className={`block text-sm font-medium hover:text-primary py-2 ${location.pathname === '/designer' ? 'text-primary font-semibold' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Designer
               </Link>
               <Link 
                 to="/pricing" 
-                className="block text-sm font-medium hover:text-primary py-2"
+                className={`block text-sm font-medium hover:text-primary py-2 ${location.pathname === '/pricing' ? 'text-primary font-semibold' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Pricing
               </Link>
-              <Link 
-                to="/support" 
-                className="block text-sm font-medium hover:text-primary py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Support
-              </Link>
+              
               <div className="flex flex-col space-y-2 pt-2 border-t border-border/40">
-                <Button variant="ghost" size="sm" asChild className="justify-start">
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                    <User className="h-4 w-4 mr-2" /> Sign In
-                  </Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-                    Get Started
-                  </Link>
-                </Button>
+                {isAuthenticated ? (
+                  <Button variant="ghost" size="sm" onClick={() => { logout(); setMobileMenuOpen(false); }} className="justify-start">
+                    <LogOut className="h-4 w-4 mr-2" /> Sign Out
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="sm" asChild className="justify-start">
+                      <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                        <User className="h-4 w-4 mr-2" /> Sign In
+                      </Link>
+                    </Button>
+                    <Button size="sm" asChild>
+                      <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                        Get Started
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -130,13 +161,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <p className="mt-4 text-sm text-muted-foreground">
                 Professional tool design software for manufacturing excellence.
               </p>
+              <p className="mt-2 text-sm">
+                NTS Tool Solution PRO v5.6.2
+              </p>
             </div>
             
             <div>
               <h4 className="font-medium mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link to="/designer" className="text-muted-foreground hover:text-foreground">Designer</Link></li>
-                <li><Link to="/features" className="text-muted-foreground hover:text-foreground">Features</Link></li>
                 <li><Link to="/pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link></li>
               </ul>
             </div>
@@ -144,18 +177,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <div>
               <h4 className="font-medium mb-4">Resources</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link to="/support" className="text-muted-foreground hover:text-foreground">Support</Link></li>
-                <li><Link to="/tutorials" className="text-muted-foreground hover:text-foreground">Tutorials</Link></li>
-                <li><Link to="/faq" className="text-muted-foreground hover:text-foreground">FAQ</Link></li>
+                <li><Link to="/" className="text-muted-foreground hover:text-foreground">Support</Link></li>
+                <li><Link to="/" className="text-muted-foreground hover:text-foreground">Tutorials</Link></li>
+                <li><Link to="/" className="text-muted-foreground hover:text-foreground">FAQ</Link></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-medium mb-4">Company</h4>
+              <h4 className="font-medium mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link to="/about" className="text-muted-foreground hover:text-foreground">About</Link></li>
-                <li><Link to="/contact" className="text-muted-foreground hover:text-foreground">Contact</Link></li>
-                <li><Link to="/terms" className="text-muted-foreground hover:text-foreground">Terms</Link></li>
+                <li><Link to="/terms" className="text-muted-foreground hover:text-foreground">Terms & Conditions</Link></li>
+                <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground">Privacy Policy</Link></li>
+                <li><Link to="/" className="text-muted-foreground hover:text-foreground">Contact</Link></li>
               </ul>
             </div>
           </div>
