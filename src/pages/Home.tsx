@@ -66,7 +66,7 @@ export default function Home() {
                 Design Precision Tools in <span className="text-primary">Minutes</span>, Not Days
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-xl">
-                NTS Tool Solution PRO helps you create custom drills, endmills, reamers, and step drills with powerful parametric design tools.
+                NTS Tool Solution PRO v5.6.2 helps you create custom drills, endmills, reamers, and step drills with powerful parametric design tools.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 <Button size="lg" asChild>

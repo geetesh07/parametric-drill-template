@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import DrillViewer from '@/components/DrillViewer';
 import ParameterInput from '@/components/ParameterInput';
@@ -103,13 +104,6 @@ const Index = () => {
           <h1 className="text-2xl font-light tracking-tight">Drill Designer Pro</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowWebGLTest(!showWebGLTest)}
-          >
-            {showWebGLTest ? 'Hide WebGL Test' : 'Show WebGL Test'}
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setActiveSection('home')}>
             <Home size={16} className="mr-1" />
             Home
@@ -118,18 +112,12 @@ const Index = () => {
             <Wrench size={16} className="mr-1" />
             Designer
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setActiveSection('documentation')}>
-            <BookOpen size={16} className="mr-1" />
-            Documentation
-          </Button>
           <Button variant="outline" size="sm" onClick={() => setActiveSection('settings')}>
             <Settings2 size={16} className="mr-1" />
             Settings
           </Button>
         </div>
       </header>
-
-      {showWebGLTest && <WebGLTest />}
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col">
@@ -149,10 +137,6 @@ const Index = () => {
                   <Button size="lg" onClick={() => setActiveSection('designer')} className="gap-2">
                     <Wrench size={18} />
                     Start Designing
-                  </Button>
-                  <Button size="lg" variant="outline" onClick={() => setActiveSection('documentation')} className="gap-2">
-                    <BookOpen size={18} />
-                    Learn More
                   </Button>
                 </div>
               </div>
@@ -276,109 +260,6 @@ const Index = () => {
           </main>
         )}
 
-        {/* Documentation Content */}
-        {activeSection === 'documentation' && (
-          <div className="p-6 max-w-screen-xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Drill Design Guide</CardTitle>
-                  <CardDescription>
-                    Learn about the key parameters and terminology for drill design
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <h3 className="text-base font-medium">Key Dimensions</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-                    <li><strong>Diameter:</strong> The cutting diameter of the drill</li>
-                    <li><strong>Overall Length:</strong> Total length from tip to end of shank</li>
-                    <li><strong>Flute Length:</strong> The length of the helical cutting flutes</li>
-                    <li><strong>Shank Length:</strong> The length of the straight portion for clamping</li>
-                  </ul>
-                  
-                  <h3 className="text-base font-medium mt-4">Geometrical Features</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-                    <li><strong>Helix Angle:</strong> The angle of the flute helix, typically 30° for general purpose</li>
-                    <li><strong>Point Angle:</strong> The included angle of the tip, typically 118° for general purpose</li>
-                    <li><strong>Flute Count:</strong> Number of flutes, affects chip evacuation and hole finish</li>
-                  </ul>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Export Options</CardTitle>
-                  <CardDescription>
-                    Available file formats and their applications
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <h3 className="text-base font-medium">Available Formats</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-                    <li><strong>STL:</strong> 3D model for 3D printing and visualization</li>
-                    <li><strong>DWG/DXF:</strong> 2D technical drawings for CAD software</li>
-                    <li><strong>STEP:</strong> 3D CAD model with full feature information</li>
-                    <li><strong>PDF:</strong> Technical drawing with dimensions and specifications</li>
-                  </ul>
-                  
-                  <h3 className="text-base font-medium mt-4">Usage Tips</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-                    <li>Use STL for quick 3D printing or visualization</li>
-                    <li>Use STEP for importing into CAD software for further design</li>
-                    <li>Use DWG/DXF for 2D technical drawings and manufacturing</li>
-                    <li>Use PDF for documentation and sharing with non-CAD users</li>
-                  </ul>
-                </CardContent>
-              </Card>
-              
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Application Guide</CardTitle>
-                  <CardDescription>
-                    Best practices for different drilling applications
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <h3 className="text-base font-medium">General Purpose</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                        <li>118° point angle</li>
-                        <li>30° helix angle</li>
-                        <li>2 flutes</li>
-                        <li>HSS material</li>
-                        <li>h8 tolerance</li>
-                      </ul>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-base font-medium">Hard Materials</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                        <li>135° point angle</li>
-                        <li>25-30° helix angle</li>
-                        <li>3-4 flutes</li>
-                        <li>Carbide or Cobalt material</li>
-                        <li>h7 tolerance</li>
-                      </ul>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="text-base font-medium">Deep Hole Drilling</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
-                        <li>118-135° point angle</li>
-                        <li>35-40° helix angle</li>
-                        <li>1-2 flutes</li>
-                        <li>HSS with TiN coating</li>
-                        <li>h8/h9 tolerance</li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
         {/* Settings Content */}
         {activeSection === 'settings' && (
           <div className="p-6 max-w-screen-xl mx-auto">
@@ -409,7 +290,7 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="w-full py-3 px-6 border-t border-border/40 text-center text-xs text-muted-foreground bg-card/30">
-        <p>Drill Designer Pro v1.0 - A precision tool design application</p>
+        <p>NTS Tool Solution PRO v5.6.2 - A precision tool design application</p>
       </footer>
       
       {/* Export dialog */}
