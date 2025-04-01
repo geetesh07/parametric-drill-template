@@ -1,11 +1,9 @@
-
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { User, Menu, X, LogOut } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { Menu, X } from 'lucide-react';
 import ToolSelector from './ToolSelector';
 
 interface MainLayoutProps {
@@ -14,7 +12,6 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -39,7 +36,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 Home
               </Link>
-              <div className={`${location.pathname.startsWith('/designer') ? 'text-primary font-semibold' : ''}`}>
+              <div className={`${location.pathname.includes('generator') ? 'text-primary font-semibold' : ''}`}>
                 <ToolSelector />
               </div>
               <Link 
@@ -59,33 +56,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
             {/* Action Buttons */}
             <div className="hidden md:flex items-center space-x-2">
               <ThemeToggle />
-              
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => navigate('/profile')}
-                    className={`${location.pathname === '/profile' ? 'bg-muted' : ''}`}
-                  >
-                    <User className="h-4 w-4 mr-1" />
-                    {user?.name}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={logout}>
-                    <LogOut className="h-4 w-4 mr-1" />
-                    Sign Out
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/login">Sign In</Link>
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link to="/signup">Get Started</Link>
-                  </Button>
-                </>
-              )}
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/login">Sign In</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link to="/signup">Get Started</Link>
+              </Button>
             </div>
             
             {/* Mobile Menu Button */}
@@ -137,34 +113,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </Link>
               
               <div className="flex flex-col space-y-2 pt-2 border-t border-border/40">
-                {isAuthenticated ? (
-                  <>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }}
-                      className="justify-start"
-                    >
-                      <User className="h-4 w-4 mr-2" /> Profile
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => { logout(); setMobileMenuOpen(false); }} className="justify-start">
-                      <LogOut className="h-4 w-4 mr-2" /> Sign Out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="ghost" size="sm" asChild className="justify-start">
-                      <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                        <User className="h-4 w-4 mr-2" /> Sign In
-                      </Link>
-                    </Button>
-                    <Button size="sm" asChild>
-                      <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-                        Get Started
-                      </Link>
-                    </Button>
-                  </>
-                )}
+                <Button variant="ghost" size="sm" asChild className="justify-start">
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                    Sign In
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                    Get Started
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>

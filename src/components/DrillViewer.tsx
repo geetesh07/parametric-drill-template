@@ -25,7 +25,7 @@ const isWebGLAvailable = () => {
   }
 };
 
-const DrillViewer: React.FC<DrillViewerProps> = ({ parameters, viewMode, wireframe = false }) => {
+const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMode, wireframe = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -937,6 +937,13 @@ const DrillViewer: React.FC<DrillViewerProps> = ({ parameters, viewMode, wirefra
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function to prevent unnecessary re-renders
+  return (
+    prevProps.viewMode === nextProps.viewMode &&
+    prevProps.wireframe === nextProps.wireframe &&
+    JSON.stringify(prevProps.parameters) === JSON.stringify(nextProps.parameters)
+  );
+});
 
-export default DrillViewer;
+export { DrillViewer };
