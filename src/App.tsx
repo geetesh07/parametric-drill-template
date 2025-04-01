@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Home from "./pages/Home";
-import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -14,6 +13,10 @@ import MainLayout from "./components/MainLayout";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Profile from "./pages/Profile";
+import DrillGenerator from "./pages/DrillGenerator";
+import EndmillGenerator from "./pages/EndmillGenerator";
+import ReamerGenerator from "./pages/ReamerGenerator";
+import StepdrillGenerator from "./pages/StepdrillGenerator";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Create a new QueryClient instance
@@ -52,10 +55,42 @@ const App = () => (
                   } 
                 />
                 <Route 
-                  path="/designer" 
+                  path="/drill-generator" 
                   element={
                     <ProtectedRoute>
-                      <Index />
+                      <MainLayout>
+                        <DrillGenerator />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/endmill-generator" 
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <EndmillGenerator />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/reamer-generator" 
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <ReamerGenerator />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/stepdrill-generator" 
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <StepdrillGenerator />
+                      </MainLayout>
                     </ProtectedRoute>
                   } 
                 />

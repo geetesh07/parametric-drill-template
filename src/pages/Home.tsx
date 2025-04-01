@@ -16,22 +16,26 @@ export default function Home() {
     { 
       icon: <Drill className="h-8 w-8 text-blue-500" />, 
       title: 'Drills', 
-      description: 'Design precision drill bits with custom flutes, angles and dimensions' 
+      description: 'Design precision drill bits with custom flutes, angles and dimensions',
+      path: '/drill-generator'
     },
     { 
       icon: <Scissors className="h-8 w-8 text-green-500" />, 
       title: 'Endmills', 
-      description: 'Create endmills with multiple flutes, variable helix, and special geometries' 
+      description: 'Create endmills with multiple flutes, variable helix, and special geometries',
+      path: '/endmill-generator'
     },
     { 
       icon: <Filter className="h-8 w-8 text-amber-500" />, 
       title: 'Reamers', 
-      description: 'Design precise reamers with custom flutes and finishing capabilities' 
+      description: 'Design precise reamers with custom flutes and finishing capabilities',
+      path: '/reamer-generator'
     },
     { 
       icon: <FileStack className="h-8 w-8 text-purple-500" />, 
       title: 'Step Drills', 
-      description: 'Generate multi-diameter step drills with precise transitions' 
+      description: 'Generate multi-diameter step drills with precise transitions',
+      path: '/stepdrill-generator'
     }
   ];
 
@@ -60,7 +64,7 @@ export default function Home() {
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
-      navigate('/designer');
+      navigate('/drill-generator');
     } else {
       navigate('/signup');
     }
@@ -84,25 +88,31 @@ export default function Home() {
                 <Button size="lg" onClick={handleGetStarted}>
                   Start Designing <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="lg" asChild>
-                  <Link to="/pricing">View Pricing</Link>
-                </Button>
               </div>
             </div>
-            <div className="lg:w-1/2 bg-gradient-to-tr from-blue-500/10 to-purple-500/10 p-8 rounded-2xl border border-border/30 shadow-lg">
-              <AspectRatio ratio={16/9} className="bg-background/50 rounded-lg overflow-hidden">
-                <div className="w-full h-full flex items-center justify-center">
-                  <img 
-                    src="/hero-tool-preview.png" 
-                    alt="Tool Preview" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgZmlsbD0iI2YxZjVmOSIvPjxwYXRoIGQ9Ik0zNTAgMTAwIEw0NTAgMTAwIEw0NTAgMzUwIEwzNTAgMzUwIFoiIGZpbGw9IiM5NGEzYjgiLz48cGF0aCBkPSJNMjAwIDEwMCBMMzUwIDEwMCBMMzUwIDM1MCBMMjAwIDM1MCBaIiBmaWxsPSIjNjRiNWY2Ii8+PHBhdGggZD0iTTIwMCAyMDAgTDQ1MCAyMDAgTDQ1MCAyMjUgTDIwMCAyMjUgWiIgZmlsbD0iIzFkNGVkOCIvPjxwYXRoIGQ9Ik0yMDAgMjUwIEw0NTAgMjUwIEw0NTAgMjc1IEwyMDAgMjc1IFoiIGZpbGw9IiMxZDRlZDgiLz48dGV4dCB4PSI0MDAiIHk9IjIyNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSIjNDc1NTY5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5UZWNobmljYWwgVG9vbCBEZXNpZ248L3RleHQ+PC9zdmc+';
-                    }}
-                  />
-                </div>
-              </AspectRatio>
+            <div className="lg:w-1/2">
+              <div className="p-6 rounded-lg border border-border bg-card/50 shadow-md">
+                <h2 className="text-2xl font-bold mb-4">Professional Tool Design Software</h2>
+                <p className="mb-4">Design precision cutting tools with our advanced parametric design platform. Our software offers:</p>
+                <ul className="space-y-2">
+                  <li className="flex items-start">
+                    <ArrowRightCircle className="h-5 w-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Real-time 3D visualization and technical drawings</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRightCircle className="h-5 w-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Manufacturing-ready exports in industry-standard formats</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRightCircle className="h-5 w-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Comprehensive parameter control for precise specifications</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRightCircle className="h-5 w-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Secure cloud storage for all your custom tool designs</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -129,7 +139,8 @@ export default function Home() {
                   </CardDescription>
                 </CardContent>
                 <CardFooter>
-                  <Button variant="ghost" size="sm" className="gap-1 text-primary" onClick={handleGetStarted}>
+                  <Button variant="ghost" size="sm" className="gap-1 text-primary" 
+                    onClick={() => isAuthenticated ? navigate(tool.path) : navigate('/login')}>
                     Design Now <ArrowRightCircle className="h-4 w-4" />
                   </Button>
                 </CardFooter>
@@ -172,9 +183,6 @@ export default function Home() {
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" onClick={handleGetStarted}>
                 Start Designing Now
-              </Button>
-              <Button variant="outline" size="lg" asChild>
-                <Link to="/pricing">View Pricing</Link>
               </Button>
             </div>
           </div>

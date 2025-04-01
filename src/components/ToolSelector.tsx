@@ -19,22 +19,22 @@ interface ToolOption {
 const tools: ToolOption[] = [
   {
     label: 'Drill',
-    path: '/designer?tool=drill',
+    path: '/drill-generator',
     description: 'Design precision drills with customizable parameters'
   },
   {
     label: 'Endmill',
-    path: '/designer?tool=endmill',
+    path: '/endmill-generator',
     description: 'Create specialized endmills for various machining operations'
   },
   {
     label: 'Reamer',
-    path: '/designer?tool=reamer',
+    path: '/reamer-generator',
     description: 'Design high-precision reamers with exact specifications'
   },
   {
     label: 'Step Drill',
-    path: '/designer?tool=stepdrill',
+    path: '/stepdrill-generator',
     description: 'Create multi-diameter step drills for efficient hole making'
   }
 ];
