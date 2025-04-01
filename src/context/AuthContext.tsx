@@ -7,6 +7,7 @@ interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  verifyEmail: (verificationCode: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,7 +31,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check for existing user on initial load
   useEffect(() => {
     const storedUser = localStorage.getItem('nts_user');
-    if (storedUser) {
+    const verifiedStatus = localStorage.getItem('nts_verified');
+    
+    if (storedUser && verifiedStatus === 'true') {
       try {
         const user = JSON.parse(storedUser);
         setAuthState({
@@ -41,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } catch (error) {
         localStorage.removeItem('nts_user');
+        localStorage.removeItem('nts_verified');
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -83,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Store user in localStorage
       localStorage.setItem('nts_user', JSON.stringify(user));
+      localStorage.setItem('nts_verified', 'true');
       
       setAuthState({
         user,
@@ -133,17 +138,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createdAt: new Date().toISOString(),
       };
       
-      // Store user in localStorage
+      // Store user in localStorage but not verified yet
       localStorage.setItem('nts_user', JSON.stringify(user));
+      localStorage.setItem('nts_verified', 'false');
       
       setAuthState({
         user,
-        isAuthenticated: true,
+        isAuthenticated: false, // Not authenticated until verified
         isLoading: false,
         error: null,
       });
       
-      toast.success('Account created successfully');
+      // Simulate sending verification email
+      toast.success('Account created! Please check your email for verification code.');
+      
+      // For demo purposes, automatically verify after 2 seconds
+      setTimeout(() => {
+        localStorage.setItem('nts_verified', 'true');
+        setAuthState(prev => ({
+          ...prev,
+          isAuthenticated: true,
+        }));
+        toast.success('Email verified successfully!');
+      }, 2000);
+      
       return true;
       
     } catch (error) {
@@ -157,9 +175,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
+  // Mock email verification
+  const verifyEmail = async (verificationCode: string): Promise<boolean> => {
+    // In a real implementation, we would send the verification code to the server
+    // For demo purposes, we'll just simulate a successful verification
+    localStorage.setItem('nts_verified', 'true');
+    
+    setAuthState(prev => ({
+      ...prev,
+      isAuthenticated: true,
+    }));
+    
+    return true;
+  };
+  
   // Logout function
   const logout = () => {
     localStorage.removeItem('nts_user');
+    localStorage.removeItem('nts_verified');
     setAuthState({
       user: null,
       isAuthenticated: false,
@@ -176,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         signup,
         logout,
+        verifyEmail,
       }}
     >
       {children}

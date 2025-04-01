@@ -23,7 +23,7 @@ const Signup = () => {
   // Redirect if already logged in
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate('/designer');
+      navigate('/designer?tool=drill');
     }
   }, [isAuthenticated, navigate]);
   
@@ -41,14 +41,17 @@ const Signup = () => {
     setIsSubmitting(false);
     
     if (success) {
-      navigate('/designer');
+      // Will navigate after verification in the AuthContext
     }
   };
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
         <ThemeToggle />
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/">Back to Home</Link>
+        </Button>
       </div>
       
       <div className="w-full max-w-md">
@@ -58,7 +61,7 @@ const Signup = () => {
           <p className="text-muted-foreground">Sign up to start designing precision tools</p>
         </div>
         
-        <Card>
+        <Card className="border-2">
           <form onSubmit={handleSubmit}>
             <CardHeader>
               <CardTitle>Sign Up</CardTitle>
@@ -75,6 +78,7 @@ const Signup = () => {
                   value={name}
                   onChange={e => setName(e.target.value)}
                   required
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -86,6 +90,7 @@ const Signup = () => {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -97,6 +102,7 @@ const Signup = () => {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
+                  className="h-11"
                 />
                 <p className="text-xs text-muted-foreground">
                   Password must be at least 6 characters long
@@ -121,8 +127,8 @@ const Signup = () => {
                 </Label>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col">
-              <Button type="submit" className="w-full" disabled={isSubmitting || !acceptTerms}>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button type="submit" className="w-full h-11" disabled={isSubmitting || !acceptTerms}>
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
@@ -135,21 +141,15 @@ const Signup = () => {
                   </span>
                 )}
               </Button>
-              <div className="mt-4 text-center text-sm">
+              <div className="text-center text-sm">
                 Already have an account?{' '}
-                <Link to="/login" className="text-primary hover:underline">
+                <Link to="/login" className="text-primary hover:underline font-medium">
                   Sign in
                 </Link>
               </div>
             </CardFooter>
           </form>
         </Card>
-        
-        <div className="mt-8 text-center">
-          <Link to="/" className="text-sm text-muted-foreground hover:underline">
-            &larr; Back to Home
-          </Link>
-        </div>
       </div>
     </div>
   );

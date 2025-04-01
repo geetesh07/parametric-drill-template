@@ -1,11 +1,12 @@
 
 import React, { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Drill, User, Menu, X, LogOut } from 'lucide-react';
+import { User, Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import ToolSelector from './ToolSelector';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { isAuthenticated, user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Close mobile menu when route changes
   useEffect(() => {
@@ -37,17 +39,20 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 Home
               </Link>
+              <div className={`${location.pathname.startsWith('/designer') ? 'text-primary font-semibold' : ''}`}>
+                <ToolSelector />
+              </div>
               <Link 
-                to="/designer" 
-                className={`text-sm font-medium transition-colors ${location.pathname === '/designer' ? 'text-primary font-semibold' : 'hover:text-primary'}`}
+                to="/terms" 
+                className={`text-sm font-medium transition-colors ${location.pathname === '/terms' ? 'text-primary font-semibold' : 'hover:text-primary'}`}
               >
-                Designer
+                Terms
               </Link>
               <Link 
-                to="/pricing" 
-                className={`text-sm font-medium transition-colors ${location.pathname === '/pricing' ? 'text-primary font-semibold' : 'hover:text-primary'}`}
+                to="/privacy" 
+                className={`text-sm font-medium transition-colors ${location.pathname === '/privacy' ? 'text-primary font-semibold' : 'hover:text-primary'}`}
               >
-                Pricing
+                Privacy
               </Link>
             </nav>
             
@@ -57,9 +62,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
               
               {isAuthenticated ? (
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-muted-foreground mr-2">
-                    Hi, {user?.name}
-                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigate('/profile')}
+                    className={`${location.pathname === '/profile' ? 'bg-muted' : ''}`}
+                  >
+                    <User className="h-4 w-4 mr-1" />
+                    {user?.name}
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={logout}>
                     <LogOut className="h-4 w-4 mr-1" />
                     Sign Out
@@ -107,26 +118,39 @@ export default function MainLayout({ children }: MainLayoutProps) {
               >
                 Home
               </Link>
+              <div className="py-2">
+                <ToolSelector />
+              </div>
               <Link 
-                to="/designer" 
-                className={`block text-sm font-medium hover:text-primary py-2 ${location.pathname === '/designer' ? 'text-primary font-semibold' : ''}`}
+                to="/terms" 
+                className={`block text-sm font-medium hover:text-primary py-2 ${location.pathname === '/terms' ? 'text-primary font-semibold' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Designer
+                Terms
               </Link>
               <Link 
-                to="/pricing" 
-                className={`block text-sm font-medium hover:text-primary py-2 ${location.pathname === '/pricing' ? 'text-primary font-semibold' : ''}`}
+                to="/privacy" 
+                className={`block text-sm font-medium hover:text-primary py-2 ${location.pathname === '/privacy' ? 'text-primary font-semibold' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Pricing
+                Privacy
               </Link>
               
               <div className="flex flex-col space-y-2 pt-2 border-t border-border/40">
                 {isAuthenticated ? (
-                  <Button variant="ghost" size="sm" onClick={() => { logout(); setMobileMenuOpen(false); }} className="justify-start">
-                    <LogOut className="h-4 w-4 mr-2" /> Sign Out
-                  </Button>
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => { navigate('/profile'); setMobileMenuOpen(false); }}
+                      className="justify-start"
+                    >
+                      <User className="h-4 w-4 mr-2" /> Profile
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => { logout(); setMobileMenuOpen(false); }} className="justify-start">
+                      <LogOut className="h-4 w-4 mr-2" /> Sign Out
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button variant="ghost" size="sm" asChild className="justify-start">
@@ -155,7 +179,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Footer */}
       <footer className="bg-muted/30 border-t border-border/40 py-8">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <Logo />
               <p className="mt-4 text-sm text-muted-foreground">
@@ -164,14 +188,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <p className="mt-2 text-sm">
                 NTS Tool Solution PRO v5.6.2
               </p>
-            </div>
-            
-            <div>
-              <h4 className="font-medium mb-4">Product</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/designer" className="text-muted-foreground hover:text-foreground">Designer</Link></li>
-                <li><Link to="/pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link></li>
-              </ul>
             </div>
             
             <div>

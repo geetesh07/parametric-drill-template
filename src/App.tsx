@@ -13,7 +13,7 @@ import NotFound from "./pages/NotFound";
 import MainLayout from "./components/MainLayout";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Pricing from "./pages/Pricing";
+import Profile from "./pages/Profile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Create a new QueryClient instance
@@ -62,11 +62,13 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route 
-                  path="/pricing" 
+                  path="/profile" 
                   element={
-                    <MainLayout>
-                      <Pricing />
-                    </MainLayout>
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <Profile />
+                      </MainLayout>
+                    </ProtectedRoute>
                   } 
                 />
                 <Route 
