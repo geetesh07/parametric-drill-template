@@ -11,6 +11,7 @@ interface DrillViewerProps {
   parameters: DrillParameters;
   viewMode: '3d' | '2d';
   wireframe?: boolean;
+  onCameraUpdate?: (camera: THREE.Camera) => void;
 }
 
 // Improved WebGL detection that doesn't modify the THREE object
@@ -25,7 +26,7 @@ const isWebGLAvailable = () => {
   }
 };
 
-const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMode, wireframe = false }) => {
+const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMode, wireframe = false, onCameraUpdate }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -258,6 +259,11 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
           if (rendererRef.current && sceneRef.current && cameraRef.current) {
             rendererRef.current.render(sceneRef.current, cameraRef.current);
           }
+          
+          // Notify parent component of camera updates
+          if (onCameraUpdate && cameraRef.current) {
+            onCameraUpdate(cameraRef.current);
+          }
         };
         
         animate();
@@ -269,7 +275,7 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [onCameraUpdate]);
 
   const createDimensionLines = () => {
     if (!dimensionsGroupRef.current) return;
