@@ -11,7 +11,40 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     fs: {
-      strict: false,
+      strict: true,
+      allow: ['..'],
+    },
+    headers: {
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob:",
+        "font-src 'self' data:",
+        "connect-src 'self' https://*.supabase.co",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self'"
+      ].join('; '),
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    },
+    cors: {
+      origin: process.env.NODE_ENV === 'production' 
+        ? ['https://your-production-domain.com'] 
+        : ['http://localhost:8080', 'http://127.0.0.1:8080'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      credentials: true,
+      maxAge: 86400,
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    },
+    proxy: {
+      // Add proxy configuration if needed
     },
   },
   plugins: [
@@ -37,6 +70,14 @@ export default defineConfig(({ mode }) => ({
     target: 'es2020',
     rollupOptions: {
       external: ['opencascade.js'],
+    },
+    sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
     },
   },
   publicDir: 'public',
