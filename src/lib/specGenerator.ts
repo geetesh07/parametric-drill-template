@@ -1,13 +1,14 @@
-
 import { DrillParameters } from '@/types/drill';
 
 // Helper function to format tolerance for display
 export const formatTolerance = (tol: string): string => {
   switch (tol) {
+    case 'h6': return '0 to -0.016 mm';
     case 'h7': return '0 to -0.025 mm';
     case 'h8': return '0 to -0.039 mm';
     case 'h9': return '0 to -0.062 mm';
     case 'h10': return '0 to -0.100 mm';
+    case 'H6': return '+0.016 to 0 mm';
     case 'H7': return '+0.025 to 0 mm';
     case 'H8': return '+0.039 to 0 mm';
     default: return tol;

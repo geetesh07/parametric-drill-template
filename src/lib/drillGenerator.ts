@@ -41,7 +41,8 @@ export const generateDrillGeometry = (parameters: DrillParameters): THREE.Buffer
   
   // Calculate basic parameters
   const tipHeight = tipAngle === 180 ? 0 : (effectiveDiameter / 2) / Math.tan((tipAngle / 2) * Math.PI / 180);
-  const flutedPartLength = fluteLength - tipHeight - (effectiveDiameter * 1.35);
+  const extensionLength = effectiveDiameter * 1.1; // Length of straight line curve
+  const flutedPartLength = fluteLength - tipHeight - extensionLength; // Include extension length in fluted part
   const chamferHeight = Math.abs(effectiveDiameter - effectiveShankDiameter) / 2;
   
   // Calculate total length
@@ -68,7 +69,8 @@ export const generateDrillGeometry = (parameters: DrillParameters): THREE.Buffer
     
     // 2. Create chamfer if needed with calculated segments
     if (chamferHeight > 0) {
-      const chamferSegments = calculateSegments(Math.max(effectiveDiameter, effectiveShankDiameter));
+      // Create a single chamfer with 45-degree angle
+      const chamferSegments = Math.max(32, Math.min(64, Math.floor(effectiveDiameter * 8)));
       const chamfer = new THREE.CylinderGeometry(
         effectiveDiameter / 2,
         effectiveShankDiameter / 2,
@@ -145,32 +147,48 @@ export const generateDrillGeometry = (parameters: DrillParameters): THREE.Buffer
     
     // Create flutes if needed
     if (fluteCount > 0) {
+      // Convert helix angle to radians
       const helixAngleRad = (helixAngle * Math.PI) / 180;
-      const helixPitch = Math.PI * effectiveDiameter / Math.tan(helixAngleRad);
-      const radius = effectiveDiameter / 2;
-      const fluteDepth = effectiveDiameter * 0.3;
       
+      // Calculate flute depth
+      const diameterRatio = effectiveDiameter / effectiveShankDiameter;
+      const baseFluteDepth = effectiveDiameter * 0.25;
+      
+      // Scale flute depth based on diameter ratio with a more gradual transition
+      const fluteDepthScale = diameterRatio > 1.5 ? 
+        Math.max(0.3, 1.0 / Math.sqrt(diameterRatio)) : 1.0;
+      const fluteDepth = baseFluteDepth * fluteDepthScale;
+      
+      // Calculate helix pitch
+      const helixPitch = Math.PI * effectiveDiameter / Math.tan(helixAngleRad);
+      
+      const radius = effectiveDiameter / 2;
       const fluteGeometries: THREE.BufferGeometry[] = [];
       
       for (let flute = 0; flute < fluteCount; flute++) {
         const baseAngle = (2 * Math.PI * flute) / fluteCount;
         
         try {
-          const helixHeight = (flutedPartLength + tipHeight) * 1.35;
-          const extensionLength = effectiveDiameter * 1.35;
+          // Standard helix height calculation
+          const calculatedRevolutions = flutedPartLength / helixPitch;
+          const revolutions = Math.max(1.2, calculatedRevolutions);
+          const helixHeight = flutedPartLength;
+          
+          // Use the full extension length
+          const extensionStartPosition = fluteStartPosition + extensionLength;
           
           const unifiedCurve = new UnifiedHelixAndExtensionCurve(
             radius,
             helixHeight,
             helixPitch,
             baseAngle,
-            fluteStartPosition,
+            extensionStartPosition,
             extensionLength
           );
           
-          // Calculate segments for flute tube
-          const tubularSegments = calculateSegments(effectiveDiameter, true);
-          const radialSegments = calculateSegments(effectiveDiameter, true);
+          // Use standard segment counts
+          const tubularSegments = Math.max(64, Math.ceil(revolutions * 24));
+          const radialSegments = Math.max(16, Math.ceil(diameter * 4));
           
           const tubeGeometry = new THREE.TubeGeometry(
             unifiedCurve,
@@ -192,15 +210,26 @@ export const generateDrillGeometry = (parameters: DrillParameters): THREE.Buffer
         const fluteMesh = new THREE.Mesh(mergedFluteGeometry, fluteMaterial);
         
         try {
-          // Convert to non-indexed for CSG
+          // Improve CSG operation handling
           const indexedDrill = drillBodyMesh.geometry.toNonIndexed();
           const indexedFlute = fluteMesh.geometry.toNonIndexed();
+          
+          // Add error checking for geometry validity
+          if (!indexedDrill.getAttribute('position') || !indexedFlute.getAttribute('position')) {
+            console.error('Invalid geometry for CSG operation');
+            return drillBodyMesh.geometry;
+          }
           
           const csgDrill = CSG.fromMesh(new THREE.Mesh(indexedDrill, drillBodyMaterial));
           const csgFlute = CSG.fromMesh(new THREE.Mesh(indexedFlute, fluteMaterial));
           
           const csgResult = csgDrill.subtract(csgFlute);
           const resultMesh = CSG.toMesh(csgResult, new THREE.Matrix4());
+          
+          if (!resultMesh.geometry.getAttribute('position')) {
+            console.error('CSG operation produced invalid geometry');
+            return drillBodyMesh.geometry;
+          }
           
           drillBodyMesh = new THREE.Mesh(resultMesh.geometry, drillBodyMaterial);
           drillBody = healGeometry(drillBodyMesh.geometry);
@@ -310,6 +339,7 @@ class UnifiedHelixAndExtensionCurve extends THREE.Curve<THREE.Vector3> {
       const helixT = (t - extensionRatio) / (1 - extensionRatio);
       
       // Calculate the parametric position on the helix
+      // Ensure we complete the exact number of revolutions regardless of pitch
       const angle = this.baseAngle - helixT * (this.helixTotalRevolutions * 2 * Math.PI);
       const y = this.startY + helixT * this.helixHeight;
       const x = this.radius * Math.cos(angle);

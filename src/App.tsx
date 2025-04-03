@@ -12,7 +12,15 @@ import MainLayout from "./components/MainLayout";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import AdminDashboard from "./pages/AdminDashboard";
+import UpdateUserRole from './pages/UpdateUserRole';
+import AdminRoute from "./components/AdminRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
+import SetAdmin from './pages/SetAdmin';
 
 // Lazy load the tool generators
 const DrillGenerator = lazy(() => import("./pages/DrillGenerator"));
@@ -23,9 +31,18 @@ const queryClient = new QueryClient();
 // Loading component for suspense fallback
 const Loading = () => (
   <div className="w-full h-screen flex items-center justify-center">
-    Loading...
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <p className="text-muted-foreground">Loading Drill Generator...</p>
+    </div>
   </div>
 );
+
+// Preload function
+const preloadDrillGenerator = () => {
+  const component = import("./pages/DrillGenerator");
+  return component;
+};
 
 // In Progress component
 const InProgressTool = ({ toolName }: { toolName: string }) => (
@@ -49,104 +66,172 @@ const InProgressTool = ({ toolName }: { toolName: string }) => (
   </div>
 );
 
-// Profile disabled component
-const ProfileDisabled = () => (
-  <div className="container py-12">
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl">Profile - Coming Soon</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <div className="animate-pulse rounded-full h-16 w-16 border-4 border-primary"></div>
-          <p className="text-lg text-center">
-            User profiles are currently in development. Account functionality will be available soon!
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
-
 const App = () => (
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system">
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
-          <SonnerToaster />
-          <BrowserRouter>
-            <Suspense fallback={<Loading />}>
-              <Routes>
-                <Route 
-                  path="/" 
-                  element={
-                    <MainLayout>
-                      <Home />
-                    </MainLayout>
-                  } 
-                />
-                <Route 
-                  path="/drill-generator" 
-                  element={
-                    <MainLayout>
-                      <DrillGenerator />
-                    </MainLayout>
-                  } 
-                />
-                <Route 
-                  path="/endmill-generator" 
-                  element={
-                    <MainLayout>
-                      <InProgressTool toolName="Endmill Generator" />
-                    </MainLayout>
-                  } 
-                />
-                <Route 
-                  path="/reamer-generator" 
-                  element={
-                    <MainLayout>
-                      <InProgressTool toolName="Reamer Generator" />
-                    </MainLayout>
-                  } 
-                />
-                <Route 
-                  path="/stepdrill-generator" 
-                  element={
-                    <MainLayout>
-                      <InProgressTool toolName="Step Drill Generator" />
-                    </MainLayout>
-                  } 
-                />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route 
-                  path="/profile" 
-                  element={
-                    <MainLayout>
-                      <ProfileDisabled />
-                    </MainLayout>
-                  } 
-                />
-                <Route 
-                  path="/terms" 
-                  element={
-                    <MainLayout>
-                      <TermsPage />
-                    </MainLayout>
-                  } 
-                />
-                <Route 
-                  path="/privacy" 
-                  element={
-                    <MainLayout>
-                      <PrivacyPolicy />
-                    </MainLayout>
-                  } 
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
+          <AuthProvider>
+            <SettingsProvider>
+              <SonnerToaster 
+                position="top-center"
+                duration={5000}
+                closeButton
+                theme="light"
+                richColors
+                expand={true}
+                className="text-lg"
+                toastOptions={{
+                  style: {
+                    fontSize: '1.1rem',
+                    padding: '1.5rem',
+                    minWidth: '400px',
+                    maxWidth: '600px',
+                    width: '100%',
+                  }
+                }}
+              />
+              <BrowserRouter>
+                <Suspense fallback={<Loading />}>
+                  <Routes>
+                    <Route 
+                      path="/" 
+                      element={
+                        <MainLayout>
+                          <Home />
+                        </MainLayout>
+                      } 
+                    />
+                    <Route 
+                      path="/login" 
+                      element={
+                        <MainLayout>
+                          <Login />
+                        </MainLayout>
+                      } 
+                    />
+                    <Route 
+                      path="/signup" 
+                      element={
+                        <MainLayout>
+                          <Signup />
+                        </MainLayout>
+                      } 
+                    />
+                    <Route 
+                      path="/terms" 
+                      element={
+                        <MainLayout>
+                          <TermsPage />
+                        </MainLayout>
+                      } 
+                    />
+                    <Route 
+                      path="/privacy" 
+                      element={
+                        <MainLayout>
+                          <PrivacyPolicy />
+                        </MainLayout>
+                      } 
+                    />
+                    <Route
+                      path="/drill-generator"
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <Suspense fallback={<Loading />}>
+                              <DrillGenerator />
+                            </Suspense>
+                          </MainLayout>
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/step-drill-generator"
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <InProgressTool toolName="Step Drill Generator" />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/reamer-generator"
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <InProgressTool toolName="Reamer Generator" />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/endmill-generator"
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <InProgressTool toolName="Endmill Generator" />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route 
+                      path="/profile" 
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <Profile />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/settings" 
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <Settings />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin" 
+                      element={
+                        <AdminRoute>
+                          <MainLayout>
+                            <AdminDashboard />
+                          </MainLayout>
+                        </AdminRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/admin/update-roles" 
+                      element={
+                        <AdminRoute>
+                          <MainLayout>
+                            <UpdateUserRole />
+                          </MainLayout>
+                        </AdminRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/set-admin" 
+                      element={
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <SetAdmin />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </SettingsProvider>
+          </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -26,6 +25,7 @@ import {
 } from '@/components/ui/tooltip';
 import { DrillParameters } from '@/types/drill';
 import { generateAutoCADInstructions } from '@/lib/specGenerator';
+import { toast } from '@/components/ui/use-toast';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -45,15 +45,20 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
     
-    // Simulate export process
-    setTimeout(() => {
-      onExport(format, filename);
-      setIsExporting(false);
+    try {
+      console.log('Starting export process...');
+      await onExport(format, filename);
+      console.log('Export completed successfully');
       onClose();
-    }, 1500);
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error(`Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (

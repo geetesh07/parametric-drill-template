@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import DrillViewer from '@/components/DrillViewer';
+import { DrillViewer } from '@/components/DrillViewer';
 import ParameterInput from '@/components/ParameterInput';
 import ExportDialog from '@/components/ExportDialog';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,10 @@ import {
   Layers3,
   Home,
   Wrench,
-  X
+  X,
+  Scissors,
+  Filter,
+  FileStack
 } from 'lucide-react';
 import { toast } from "sonner";
 import { 
@@ -32,6 +34,7 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   // State for drill parameters
@@ -195,6 +198,7 @@ const Index = () => {
                 }}
                 onExport={handleExport}
                 onReset={handleReset}
+                onGenerateModel={() => {}}
               />
               
               <div className="p-3 rounded-lg mt-auto border border-border/40 bg-card/20">
@@ -234,22 +238,6 @@ const Index = () => {
                     <FileDown className="w-3.5 h-3.5" />
                     <span>Export</span>
                   </Button>
-                  <Tabs 
-                    value={viewMode} 
-                    onValueChange={(v) => setViewMode(v as '3d' | '2d')}
-                    className="w-auto"
-                  >
-                    <TabsList>
-                      <TabsTrigger value="3d" className="gap-1">
-                        <Box className="w-3.5 h-3.5" />
-                        <span>3D View</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="2d" className="gap-1">
-                        <Grid2X2 className="w-3.5 h-3.5" />
-                        <span>2D View</span>
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
                 </div>
               </div>
               
@@ -292,11 +280,6 @@ const Index = () => {
         )}
       </div>
 
-      {/* Footer */}
-      <footer className="w-full py-3 px-6 border-t border-border/40 text-center text-xs text-muted-foreground bg-card/30">
-        <p>NTS Tool Solution PRO v5.6.2 - A precision tool design application</p>
-      </footer>
-      
       {/* Export dialog */}
       <ExportDialog
         isOpen={isExportDialogOpen}

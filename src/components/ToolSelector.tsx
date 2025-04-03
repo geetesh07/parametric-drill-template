@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -18,24 +17,24 @@ interface ToolOption {
 
 const tools: ToolOption[] = [
   {
-    label: 'Drill',
+    label: 'Drill Generator',
     path: '/drill-generator',
     description: 'Design precision drills with customizable parameters'
   },
   {
-    label: 'Endmill',
+    label: 'Endmill Generator',
     path: '/endmill-generator',
-    description: 'Create specialized endmills for various machining operations'
+    description: 'Create custom endmill designs with precise parameters'
   },
   {
-    label: 'Reamer',
+    label: 'Reamer Generator',
     path: '/reamer-generator',
-    description: 'Design high-precision reamers with exact specifications'
+    description: 'Design reamers with customizable specifications'
   },
   {
-    label: 'Step Drill',
-    path: '/stepdrill-generator',
-    description: 'Create multi-diameter step drills for efficient hole making'
+    label: 'Step Drill Generator',
+    path: '/step-drill-generator',
+    description: 'Generate step drill designs for multi-diameter holes'
   }
 ];
 

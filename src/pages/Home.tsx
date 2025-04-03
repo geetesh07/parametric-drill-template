@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,7 @@ export default function Home() {
       icon: <FileStack className="h-8 w-8 text-purple-500" />, 
       title: 'Step Drills', 
       description: 'Generate multi-diameter step drills with precise transitions',
-      path: '/stepdrill-generator'
+      path: '/step-drill-generator'
     }
   ];
 
@@ -77,12 +76,12 @@ export default function Home() {
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.05]"></div>
         <div className="container px-4 mx-auto relative z-10">
           <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="lg:w-1/2 space-y-6">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
+            <div className="lg:w-1/2 space-y-8">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.5]">
                 Design Precision Tools in <span className="text-primary">Minutes</span>, Not Days
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-xl">
-                NTS Tool Solution PRO v5.6.2 helps you create custom drills, endmills, reamers, and step drills with powerful parametric design tools.
+                NTS Tool Solution PRO helps you create custom drills, endmills, reamers, and step drills with powerful parametric design tools.
               </p>
               <div className="flex flex-wrap gap-4 pt-4">
                 <Button size="lg" onClick={handleGetStarted}>
@@ -128,7 +127,7 @@ export default function Home() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {toolTypes.map((tool, index) => (
-              <Card key={index} className="border border-border/40 transition-all hover:shadow-md hover:border-primary/20">
+              <Card key={index} className="border border-border/40 transition-all hover:shadow-md hover:border-primary/20 dark:bg-zinc-900/50">
                 <CardHeader className="pb-2">
                   <div className="mb-2">{tool.icon}</div>
                   <CardTitle>{tool.title}</CardTitle>

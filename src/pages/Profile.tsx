@@ -1,142 +1,144 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { useToast } from '../components/ui/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { User, Mail, Phone, Calendar } from 'lucide-react';
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
+export default function Profile() {
+  const { user, updateProfile } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: user?.user_metadata?.full_name || '',
+    phoneNumber: user?.user_metadata?.phone_number || '',
+  });
 
-const Profile = () => {
-  const { user, logout } = useAuth();
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
+  useEffect(() => {
+    if (user?.user_metadata) {
+      setFormData({
+        fullName: user.user_metadata.full_name || '',
+        phoneNumber: user.user_metadata.phone_number || '',
+      });
     }
+  }, [user]);
 
-    if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long');
-      return;
-    }
-
-    setIsSubmitting(true);
-    
-    // Mock password change
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success('Password changed successfully');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setIsSubmitting(false);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  if (!user) {
-    return null;
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      await updateProfile({
+        full_name: formData.fullName,
+        phone_number: formData.phoneNumber,
+      });
+
+      toast({
+        title: "Success",
+        description: "Your profile has been updated.",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Your Profile</h1>
-        
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Account Information</CardTitle>
-            <CardDescription>Your personal account details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name" className="text-muted-foreground">Name</Label>
-                <div className="font-medium mt-1">{user.name}</div>
-              </div>
-              <div>
-                <Label htmlFor="email" className="text-muted-foreground">Email</Label>
-                <div className="font-medium mt-1">{user.email}</div>
-              </div>
-              <div>
-                <Label htmlFor="member-since" className="text-muted-foreground">Member Since</Label>
-                <div className="font-medium mt-1">
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="account-type" className="text-muted-foreground">Account Type</Label>
-                <div className="font-medium mt-1 capitalize">{user.role}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="container max-w-4xl py-8">
+      <div className="flex flex-col gap-8">
+        <div>
+          <h1 className="text-3xl font-bold">Profile</h1>
+          <p className="text-muted-foreground">
+            Manage your account settings and profile information.
+          </p>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-            <CardDescription>Update your password to keep your account secure</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordChange} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Separator className="my-4" />
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="pt-2">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Updating...' : 'Update Password'}
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                Update your personal information and how others see you on the platform.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="fullName"
+                        name="fullName"
+                        value={formData.fullName}
+                        onChange={handleChange}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        value={user?.email || ''}
+                        disabled
+                        className="pl-9 bg-muted"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={handleChange}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Account Created</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={new Date(user?.created_at || '').toLocaleDateString()}
+                        disabled
+                        className="pl-9 bg-muted"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Saving changes..." : "Save changes"}
                 </Button>
-              </div>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-between border-t pt-6">
-            <Button variant="outline" onClick={() => navigate('/')}>
-              Back to Home
-            </Button>
-            <Button variant="destructive" onClick={logout}>
-              Sign Out
-            </Button>
-          </CardFooter>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
-};
-
-export default Profile;
+}

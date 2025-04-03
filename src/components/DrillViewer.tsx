@@ -53,17 +53,13 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
       
       const cameraDistance = maxDimension * 1.5;
       
-      if (viewMode === '3d') {
-        cameraRef.current.position.set(
-          cameraDistance * 0.7, 
-          cameraDistance * 0.4, 
-          cameraDistance * 0.7
-        );
-        controlsRef.current.target.set(0, 0, 0);
-      } else {
-        cameraRef.current.position.set(0, 0, cameraDistance);
-        controlsRef.current.target.set(0, 0, 0);
-      }
+      // Always use 3D view mode
+      cameraRef.current.position.set(
+        cameraDistance * 0.7, 
+        cameraDistance * 0.4, 
+        cameraDistance * 0.7
+      );
+      controlsRef.current.target.set(0, 0, 0);
       
       controlsRef.current.update();
       defaultCameraPositionRef.current = cameraRef.current.position.clone();
@@ -98,13 +94,9 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
       // Add padding to ensure the entire drill is visible
       distance *= 1.5;
       
-      if (viewMode === '2d') {
-        cameraRef.current.position.set(0, 0, distance);
-        cameraRef.current.up.set(0, 1, 0);
-      } else {
-        const direction = cameraRef.current.position.clone().sub(controlsRef.current.target).normalize();
-        cameraRef.current.position.copy(center.clone().add(direction.multiplyScalar(distance)));
-      }
+      // Always use 3D view mode
+      const direction = cameraRef.current.position.clone().sub(controlsRef.current.target).normalize();
+      cameraRef.current.position.copy(center.clone().add(direction.multiplyScalar(distance)));
       
       controlsRef.current.update();
       
@@ -567,10 +559,12 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
 
   const formatTolerance = (tol: string): string => {
     switch (tol) {
+      case 'h6': return '0 to -0.016 mm';
       case 'h7': return '0 to -0.025 mm';
       case 'h8': return '0 to -0.039 mm';
       case 'h9': return '0 to -0.062 mm';
       case 'h10': return '0 to -0.100 mm';
+      case 'H6': return '+0.016 to 0 mm';
       case 'H7': return '+0.025 to 0 mm';
       case 'H8': return '+0.039 to 0 mm';
       default: return tol;
@@ -690,34 +684,26 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
       sceneRef.current.add(drillMesh);
       drillMeshRef.current = drillMesh;
       
-      // Create dimension lines in 2D mode
-      if (viewMode === '2d' && dimensionsGroupRef.current) {
-        createDimensionLines();
-      }
-
+      // No longer create dimension lines in 2D mode
+      
       // Automatically fit the view to the drill
       setTimeout(() => {
-        if (viewMode === '3d') {
-          // For 3D view, position camera to show drill at an angle
-          const maxDimension = Math.max(
-            parameters.length,
-            parameters.diameter * 2,
-            parameters.shankDiameter * 2
+        // Always use 3D view mode
+        const maxDimension = Math.max(
+          parameters.length,
+          parameters.diameter * 2,
+          parameters.shankDiameter * 2
+        );
+        
+        const cameraDistance = maxDimension * 2;
+        if (cameraRef.current && controlsRef.current) {
+          cameraRef.current.position.set(
+            cameraDistance * 0.7,
+            cameraDistance * 0.5,
+            cameraDistance * 0.7
           );
-          
-          const cameraDistance = maxDimension * 2;
-          if (cameraRef.current && controlsRef.current) {
-            cameraRef.current.position.set(
-              cameraDistance * 0.7,
-              cameraDistance * 0.5,
-              cameraDistance * 0.7
-            );
-            controlsRef.current.target.set(0, 0, 0);
-            controlsRef.current.update();
-          }
-        } else {
-          // For 2D view, use zoomToFit
-          zoomToFit();
+          controlsRef.current.target.set(0, 0, 0);
+          controlsRef.current.update();
         }
         
         // Force an immediate render
@@ -741,23 +727,13 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
     try {
       defaultCameraPositionRef.current = cameraRef.current.position.clone();
       
-      dimensionsGroupRef.current.visible = viewMode === '2d';
+      // Always hide dimensions group (2D view elements)
+      dimensionsGroupRef.current.visible = false;
       
-      if (viewMode === '2d') {
-        createDimensionLines();
-        
-        cameraRef.current.position.set(0, 0, 40);
-        cameraRef.current.up.set(0, 1, 0);
-        cameraRef.current.lookAt(0, 0, 0);
-        
-        controlsRef.current.enableRotate = !isHandMode;
-        controlsRef.current.update();
-        
-      } else {
-        cameraRef.current.position.copy(defaultCameraPositionRef.current);
-        controlsRef.current.enableRotate = true;
-        controlsRef.current.update();
-      }
+      // Always use 3D view mode
+      cameraRef.current.position.copy(defaultCameraPositionRef.current);
+      controlsRef.current.enableRotate = true;
+      controlsRef.current.update();
       
       resetView();
     } catch (error) {
@@ -809,15 +785,7 @@ const DrillViewer: React.FC<DrillViewerProps> = React.memo(({ parameters, viewMo
       cameraRef.current.aspect = width / height;
       cameraRef.current.updateProjectionMatrix();
       
-      // Adjust camera position based on new dimensions
-      if (viewMode === '2d') {
-        const maxDimension = Math.max(parameters.length, parameters.diameter * 2);
-        const fov = cameraRef.current.fov * (Math.PI / 180);
-        let distance = maxDimension / (2 * Math.tan(fov / 2));
-        distance *= 1.5; // Add some padding
-        
-        cameraRef.current.position.set(0, 0, distance);
-      }
+      // Always use 3D view mode
       
       // Force a render
       if (sceneRef.current) {

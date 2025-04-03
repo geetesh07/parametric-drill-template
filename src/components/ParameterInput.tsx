@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { 
   Card,
   CardContent,
@@ -23,33 +23,99 @@ import {
   TabsList, 
   TabsTrigger 
 } from '@/components/ui/tabs';
-import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
-import { Download, RefreshCw, Save } from 'lucide-react';
+import { Download, RefreshCw, Save, Check, X, Loader2, Wand2 } from 'lucide-react';
 import { toast } from "sonner";
 import { DrillParameters, ToleranceType, MaterialType, SurfaceFinishType } from '../types/drill';
+import { exportDrillModel } from '@/lib/exportUtils';
+import { useSettings } from '@/context/SettingsContext';
 
 interface ParameterInputProps {
   parameters: DrillParameters;
   onParameterChange: (key: keyof DrillParameters, value: number | string) => void;
-  onExport: () => void;
+  onExport: (format: 'stl' | 'dxf') => void;
   onReset: () => void;
+  onGenerateModel: () => void;
+  isGenerating?: boolean;
 }
 
 const ParameterInput: React.FC<ParameterInputProps> = ({
   parameters,
   onParameterChange,
   onExport,
-  onReset
+  onReset,
+  onGenerateModel,
+  isGenerating = false
 }) => {
+  // State for tracking steps
+  const [currentStep, setCurrentStep] = useState<'diameters' | 'lengths' | 'features'>('diameters');
+  const [isModelGenerated, setIsModelGenerated] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
+  
+  // Add validation state
+  const [validationState, setValidationState] = useState({
+    diameters: false,
+    lengths: false,
+    features: false
+  });
+
   // Debounce timer ref
   const debounceTimer = useRef<NodeJS.Timeout>();
   
+  const { showToasts } = useSettings();
+  
   // Memoize calculateMinLength
   const calculateMinLength = useCallback((params: DrillParameters) => {
-    return params.shankLength + params.fluteLength + 
-      (Math.abs(params.diameter - params.shankDiameter) / 2);
+    // Calculate chamfer height
+    const chamferHeight = Math.abs(params.diameter - params.shankDiameter) / 2;
+    
+    // Calculate total minimum length and round to nearest whole number
+    // Overall length = flute length (includes tip) + shank length + chamfer length + 3mm buffer
+    // Note: shank length starts after the fluted part
+    return Math.round(params.fluteLength + params.shankLength + chamferHeight + 3);
   }, []);
+
+  const calculateNonCuttingLength = useCallback((params: DrillParameters) => {
+    // Calculate chamfer height
+    const chamferHeight = Math.abs(params.diameter - params.shankDiameter) / 2;
+    
+    // Calculate total minimum length
+    const minLength = Math.round(params.fluteLength + params.shankLength + chamferHeight + 3);
+    
+    // Calculate non-cutting length as the difference between total length and minimum length
+    return Math.max(0, Math.round(params.length - minLength));
+  }, []);
+
+  // Memoize all calculations
+  const minLength = useMemo(() => calculateMinLength(parameters), [
+    parameters.shankLength,
+    parameters.fluteLength,
+    parameters.diameter,
+    parameters.shankDiameter,
+    parameters.tipAngle,
+    parameters.length,
+    calculateMinLength
+  ]);
+
+  // Update validation state when parameters change
+  React.useEffect(() => {
+    const newValidationState = {
+      diameters: parameters.diameter > 0 && parameters.shankDiameter > 0,
+      lengths: parameters.shankLength > 0 && parameters.fluteLength > 0,
+      features: parameters.length >= minLength
+    };
+
+    // Only update if validation state has changed
+    if (JSON.stringify(newValidationState) !== JSON.stringify(validationState)) {
+      setValidationState(newValidationState);
+    }
+  }, [parameters, minLength, validationState]);
+
+  // Handle tab change with validation
+  const handleTabChange = (value: 'diameters' | 'lengths' | 'features') => {
+    // Allow switching to any tab
+    setCurrentStep(value);
+  };
 
   // Debounced parameter change handler
   const debouncedParameterChange = useCallback((key: keyof DrillParameters, value: number | string) => {
@@ -63,113 +129,176 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
   }, [onParameterChange]);
 
   const handleParameterChange = useCallback((key: keyof DrillParameters, value: number | string) => {
-    // Handle string inputs immediately for better responsiveness
-    if (typeof value === 'string' && value !== '') {
-      debouncedParameterChange(key, value);
+    // Handle empty string inputs
+    if (typeof value === 'string' && value === '') {
+      onParameterChange(key, 0);
       return;
     }
 
-    // Convert to number for validation
-    const numValue = typeof value === 'number' ? value : parseFloat(value as string);
-    
-    // Prevent negative values
-    if (numValue < 0) {
-      debouncedParameterChange(key, 0);
-      return;
-    }
-
-    // Special handling for length-related parameters
-    if (key === 'shankLength' || key === 'fluteLength' || key === 'diameter' || key === 'shankDiameter') {
-      const updatedParams = { ...parameters, [key]: numValue };
-      const minLength = calculateMinLength(updatedParams);
-      
-      // Batch updates
-      const updates: { key: keyof DrillParameters; value: number }[] = [];
-      
-      if (updatedParams.length < minLength) {
-        updates.push(
-          { key: 'length', value: minLength },
-          { key: 'nonCuttingLength', value: 0 },
-          { key, value: numValue }
-        );
-        
-        toast.warning(`Adjusted overall length to minimum: ${minLength.toFixed(2)}mm`, {
-          description: 'Length was automatically adjusted to accommodate the minimum required length.',
-          duration: 3000,
-          position: 'top-center',
-        });
-      } else {
-        const newNonCuttingLength = updatedParams.length - minLength;
-        updates.push(
-          { key: 'nonCuttingLength', value: newNonCuttingLength },
-          { key, value: numValue }
-        );
+    // Handle string inputs that are numbers
+    if (typeof value === 'string') {
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        handleParameterChange(key, numValue);
       }
-      
-      // Apply updates with debouncing
-      updates.forEach(update => debouncedParameterChange(update.key, update.value));
-      
-    } else if (key === 'length') {
-      // For overall length, allow any value during typing
-      debouncedParameterChange(key, numValue);
-      
-      // Only validate and adjust when the input is complete
-      if (typeof value === 'number' || (typeof value === 'string' && value !== '' && !(value as string).endsWith('.'))) {
-        const minLength = calculateMinLength(parameters);
+      return;
+    }
+
+    // Handle number inputs
+    if (typeof value === 'number') {
+      // Prevent negative values
+      if (value < 0) {
+        onParameterChange(key, 0);
+        return;
+      }
+
+      // Special handling for length-related parameters
+      if (key === 'shankLength' || key === 'fluteLength' || key === 'diameter' || key === 'shankDiameter' || key === 'tipAngle') {
+        const updatedParams = { ...parameters, [key]: value };
+        const newMinLength = calculateMinLength(updatedParams);
         
-        if (numValue < minLength) {
-          debouncedParameterChange('length', minLength);
-          debouncedParameterChange('nonCuttingLength', 0);
+        // Batch updates
+        const updates: { key: keyof DrillParameters; value: number }[] = [];
+        
+        if (updatedParams.length < newMinLength) {
+          updates.push(
+            { key: 'length', value: newMinLength },
+            { key: 'nonCuttingLength', value: 0 },
+            { key, value }
+          );
           
-          toast.error(`Length cannot be less than ${minLength.toFixed(2)}mm`, {
-            description: `Minimum required length:\n` +
-              `• Shank Length: ${parameters.shankLength}mm\n` +
-              `• Flute Length: ${parameters.fluteLength}mm\n` +
-              (Math.abs(parameters.diameter - parameters.shankDiameter) > 0 
-                ? `• Chamfer Height: ${(Math.abs(parameters.diameter - parameters.shankDiameter) / 2).toFixed(2)}mm\n`
-                : '') +
-              `\nTotal Minimum: ${minLength.toFixed(2)}mm`,
-            duration: 4000,
-            position: 'top-center',
-          });
+          if (showToasts) {
+            toast.warning(`Adjusted overall length to minimum: ${newMinLength}mm`, {
+              description: `Length was automatically adjusted due to changes in ${key}:\n` +
+                `• New ${key}: ${value}mm\n` +
+                `• New Minimum Length: ${newMinLength}mm\n` +
+                `• Components:\n` +
+                `  - Flute Length: ${updatedParams.fluteLength}mm\n` +
+                `  - Shank Length: ${updatedParams.shankLength}mm\n` +
+                (Math.abs(updatedParams.diameter - updatedParams.shankDiameter) > 0 
+                  ? `  - Chamfer Height: ${Math.round(Math.abs(updatedParams.diameter - updatedParams.shankDiameter) / 2)}mm\n`
+                  : '') +
+                `  - Buffer: 3mm`,
+              duration: 4000,
+              position: 'top-center',
+            });
+          }
         } else {
-          const newNonCuttingLength = numValue - minLength;
-          debouncedParameterChange('nonCuttingLength', newNonCuttingLength);
+          const newNonCuttingLength = calculateNonCuttingLength(updatedParams);
+          updates.push(
+            { key: 'nonCuttingLength', value: newNonCuttingLength },
+            { key, value }
+          );
         }
+        
+        // Apply updates immediately for length-related changes
+        updates.forEach(update => onParameterChange(update.key, update.value));
+      } else if (key === 'length') {
+        // For overall length, allow any value during typing
+        onParameterChange(key, value);
+        
+        // Only validate and adjust when the input is complete
+        const newMinLength = calculateMinLength(parameters);
+        
+        if (value < newMinLength) {
+          onParameterChange('length', newMinLength);
+          onParameterChange('nonCuttingLength', 0);
+          
+          if (showToasts) {
+            toast.error(`Length cannot be less than ${newMinLength}mm`, {
+              description: `Minimum required length:\n` +
+                `• Flute Length: ${parameters.fluteLength}mm\n` +
+                `• Shank Length: ${parameters.shankLength}mm\n` +
+                (Math.abs(parameters.diameter - parameters.shankDiameter) > 0 
+                  ? `• Chamfer Height: ${Math.round(Math.abs(parameters.diameter - parameters.shankDiameter) / 2)}mm\n`
+                  : '') +
+                `• Buffer: 3mm\n` +
+                `\nTotal Minimum: ${newMinLength}mm`,
+              duration: 4000,
+              position: 'top-center',
+            });
+          }
+        } else {
+          const newNonCuttingLength = calculateNonCuttingLength({ ...parameters, length: value });
+          onParameterChange('nonCuttingLength', newNonCuttingLength);
+        }
+      } else {
+        // For all other parameters, use debounced update
+        debouncedParameterChange(key, value);
       }
-    } else {
-      // For all other parameters, just update normally
-      debouncedParameterChange(key, numValue);
     }
-  }, [parameters, calculateMinLength, debouncedParameterChange]);
-
-  // Memoize all calculations
-  const minLength = useMemo(() => calculateMinLength(parameters), [
-    parameters.shankLength,
-    parameters.fluteLength,
-    parameters.diameter,
-    parameters.shankDiameter,
-    calculateMinLength
-  ]);
+  }, [parameters, calculateMinLength, calculateNonCuttingLength, debouncedParameterChange, onParameterChange, showToasts]);
 
   const chamferHeight = useMemo(() => 
-    Math.abs(parameters.diameter - parameters.shankDiameter) / 2,
+    Math.round(Math.abs(parameters.diameter - parameters.shankDiameter) / 2),
     [parameters.diameter, parameters.shankDiameter]
   );
 
   const nonCuttingLength = useMemo(() => 
-    parameters.length - minLength,
-    [parameters.length, minLength]
+    calculateNonCuttingLength(parameters),
+    [parameters, calculateNonCuttingLength]
   );
 
-  // Memoize handlers for sliders and inputs
-  const handleSliderChange = useCallback((key: keyof DrillParameters) => (value: number[]) => {
-    handleParameterChange(key, value[0]);
-  }, [handleParameterChange]);
+  const tipHeight = useMemo(() => 
+    Math.round(parameters.tipAngle === 180 ? 0 : (parameters.diameter / 2) / Math.tan((parameters.tipAngle / 2) * Math.PI / 180)),
+    [parameters.diameter, parameters.tipAngle]
+  );
 
   const handleInputChange = useCallback((key: keyof DrillParameters) => (e: React.ChangeEvent<HTMLInputElement>) => {
     handleParameterChange(key, e.target.value);
   }, [handleParameterChange]);
+
+  const handleNextStep = () => {
+    switch (currentStep) {
+      case 'diameters':
+        if (parameters.diameter > 0 && parameters.shankDiameter > 0) {
+          setCurrentStep('lengths');
+        } else if (showToasts) {
+          toast.error('Please enter both drill and shank diameters');
+        }
+        break;
+      case 'lengths':
+        if (parameters.shankLength > 0 && parameters.fluteLength > 0) {
+          setCurrentStep('features');
+        } else if (showToasts) {
+          toast.error('Please enter both shank and flute lengths');
+        }
+        break;
+      case 'features':
+        // Validate overall length before generating model
+        if (parameters.length >= minLength) {
+          setIsModelGenerated(true);
+          onGenerateModel();
+        } else if (showToasts) {
+          toast.error(`Overall length must be at least ${minLength}mm`);
+        }
+        break;
+    }
+  };
+
+  const handleBackStep = () => {
+    switch (currentStep) {
+      case 'lengths':
+        setCurrentStep('diameters');
+        break;
+      case 'features':
+        setCurrentStep('lengths');
+        break;
+    }
+  };
+
+  const handleExport = async (format: string) => {
+    try {
+      const filename = `Drill_${parameters.diameter}x${parameters.length}_${parameters.fluteCount}F`;
+      await exportDrillModel(parameters, format, filename, showToasts);
+      setShowExportOptions(false);
+    } catch (error) {
+      console.error('Export error:', error);
+      if (showToasts) {
+        toast.error('Failed to export model');
+      }
+    }
+  };
 
   // Cleanup debounce timer on unmount
   React.useEffect(() => {
@@ -181,23 +310,23 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
   }, []);
 
   return (
-    <Card className="w-full max-w-md glass animate-slide-up">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-light tracking-tight">Drill Parameters</CardTitle>
-        <CardDescription>
-          Configure the dimensions and properties of your drill
+    <Card className="dark:bg-gray-800">
+      <CardHeader>
+        <CardTitle className="dark:text-white">Drill Parameters</CardTitle>
+        <CardDescription className="dark:text-gray-400">
+          Configure your drill bit specifications
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="dimensions" className="w-full">
-          <TabsList className="w-full mb-4">
-            <TabsTrigger value="dimensions" className="flex-1">Dimensions</TabsTrigger>
-            <TabsTrigger value="features" className="flex-1">Features</TabsTrigger>
-            <TabsTrigger value="materials" className="flex-1">Materials</TabsTrigger>
+        <Tabs value={currentStep} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="diameters" className="dark:data-[state=active]:bg-gray-700 dark:text-white">Diameters</TabsTrigger>
+            <TabsTrigger value="lengths" className="dark:data-[state=active]:bg-gray-700 dark:text-white">Lengths</TabsTrigger>
+            <TabsTrigger value="features" className="dark:data-[state=active]:bg-gray-700 dark:text-white">Features</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="dimensions" className="space-y-4 animate-fade-in">
-            {/* Diameter parameters first */}
+          <TabsContent value="diameters" className="space-y-4">
+            {/* Diameter parameters */}
             <div className="p-3 bg-primary/5 rounded-md mb-2">
               <h3 className="text-sm font-medium mb-2">Diameter Parameters</h3>
               
@@ -211,24 +340,13 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                     {parameters.diameter} mm
                   </span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Slider
-                    id="diameter"
-                    min={0}
-                    max={50}
-                    step={0.1}
-                    value={[parameters.diameter]}
-                    onValueChange={handleSliderChange('diameter')}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    value={parameters.diameter}
-                    onChange={handleInputChange('diameter')}
-                    className="w-16 text-right parameter-input"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  value={parameters.diameter}
+                  onChange={handleInputChange('diameter')}
+                  className="w-full text-right parameter-input"
+                />
               </div>
 
               {/* Shank Diameter */}
@@ -241,31 +359,20 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                     {parameters.shankDiameter} mm
                   </span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Slider
-                    id="shankDiameter"
-                    min={0}
-                    max={50}
-                    step={0.1}
-                    value={[parameters.shankDiameter]}
-                    onValueChange={handleSliderChange('shankDiameter')}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    value={parameters.shankDiameter}
-                    onChange={handleInputChange('shankDiameter')}
-                    className="w-16 text-right parameter-input"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  value={parameters.shankDiameter}
+                  onChange={handleInputChange('shankDiameter')}
+                  className="w-full text-right parameter-input"
+                />
                 {/* Chamfer Height Display */}
                 {Math.abs(parameters.diameter - parameters.shankDiameter) > 0 && (
                   <div className="mt-2 p-2 bg-muted rounded-md">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-medium">Chamfer Height:</span>
                       <span className="text-xs text-muted-foreground">
-                        {(Math.abs(parameters.diameter - parameters.shankDiameter) / 2).toFixed(2)} mm
+                        {Math.round(Math.abs(parameters.diameter - parameters.shankDiameter) / 2)} mm
                       </span>
                     </div>
                   </div>
@@ -279,59 +386,32 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                 </Label>
                 <Select
                   value={parameters.tolerance}
-                  onValueChange={(value: ToleranceType) => handleParameterChange('tolerance', value)}
+                  onValueChange={(value: ToleranceType) => onParameterChange('tolerance', value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select tolerance" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="h7">h7 (0 to -0.025 mm)</SelectItem>
-                    <SelectItem value="h8">h8 (0 to -0.039 mm)</SelectItem>
-                    <SelectItem value="h9">h9 (0 to -0.062 mm)</SelectItem>
-                    <SelectItem value="h10">h10 (0 to -0.100 mm)</SelectItem>
+                    <SelectItem value="h6">H6 (0 to -0.016 mm)</SelectItem>
+                    <SelectItem value="h7">H7 (0 to -0.025 mm)</SelectItem>
+                    <SelectItem value="h8">H8 (0 to -0.039 mm)</SelectItem>
+                    <SelectItem value="h9">H9 (0 to -0.062 mm)</SelectItem>
+                    <SelectItem value="h10">H10 (0 to -0.100 mm)</SelectItem>
+                    <SelectItem value="H6">H6 (+0.016 to 0 mm)</SelectItem>
                     <SelectItem value="H7">H7 (+0.025 to 0 mm)</SelectItem>
                     <SelectItem value="H8">H8 (+0.039 to 0 mm)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Tip Angle */}
-              <div className="space-y-2 mt-3">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="tipAngle" className="text-sm font-medium">
-                    Tip Angle (degrees)
-                  </Label>
-                  <span className="text-xs text-muted-foreground">
-                    {parameters.tipAngle}°
-                  </span>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <Slider
-                    id="tipAngle"
-                    min={60}
-                    max={180}
-                    step={1}
-                    value={[parameters.tipAngle]}
-                    onValueChange={handleSliderChange('tipAngle')}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min={60}
-                    max={180}
-                    value={parameters.tipAngle}
-                    onChange={handleInputChange('tipAngle')}
-                    className="w-16 text-right parameter-input"
-                  />
-                </div>
-              </div>
             </div>
+          </TabsContent>
 
+          <TabsContent value="lengths" className="space-y-4">
             {/* Length parameters */}
             <div className="p-3 bg-primary/5 rounded-md mb-2">
               <h3 className="text-sm font-medium mb-2">Length Parameters</h3>
               
-              {/* Shank Length - moved to the top */}
+              {/* Shank Length */}
               <div className="space-y-2 mb-3">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="shankLength" className="text-sm font-medium">
@@ -341,27 +421,16 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                     {parameters.shankLength} mm
                   </span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Slider
-                    id="shankLength"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={[parameters.shankLength]}
-                    onValueChange={handleSliderChange('shankLength')}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    value={parameters.shankLength}
-                    onChange={handleInputChange('shankLength')}
-                    className="w-16 text-right parameter-input"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  value={parameters.shankLength}
+                  onChange={handleInputChange('shankLength')}
+                  className="w-full text-right parameter-input"
+                />
               </div>
 
-              {/* Flute Length - moved to dimensions section */}
+              {/* Flute Length */}
               <div className="space-y-2 mb-3">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="fluteLength" className="text-sm font-medium">
@@ -371,24 +440,13 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                     {parameters.fluteLength} mm
                   </span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Slider
-                    id="fluteLength"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={[parameters.fluteLength]}
-                    onValueChange={handleSliderChange('fluteLength')}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    value={parameters.fluteLength}
-                    onChange={handleInputChange('fluteLength')}
-                    className="w-16 text-right parameter-input"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  value={parameters.fluteLength}
+                  onChange={handleInputChange('fluteLength')}
+                  className="w-full text-right parameter-input"
+                />
               </div>
               
               {/* Overall Length Input */}
@@ -401,138 +459,156 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
                     {parameters.length} mm
                   </span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Slider
-                    id="length"
-                    min={0}
-                    max={200}
-                    step={0.1}
-                    value={[parameters.length]}
-                    onValueChange={handleSliderChange('length')}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    value={parameters.length}
-                    onChange={handleInputChange('length')}
-                    onBlur={handleInputChange('length')}
-                    className="w-16 text-right parameter-input"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  value={parameters.length}
+                  onChange={(e) => {
+                    // Allow any value during typing
+                    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    handleParameterChange('length', value);
+                  }}
+                  onBlur={(e) => {
+                    // Validate on blur
+                    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                    if (!isNaN(value)) {
+                      if (value < minLength) {
+                        toast.error(`Length cannot be less than ${minLength}mm`, {
+                          description: `Minimum required length:\n` +
+                            `• Flute Length: ${parameters.fluteLength}mm\n` +
+                            `• Shank Length: ${parameters.shankLength}mm\n` +
+                            (Math.abs(parameters.diameter - parameters.shankDiameter) > 0 
+                              ? `• Chamfer Height: ${Math.round(Math.abs(parameters.diameter - parameters.shankDiameter) / 2)}mm\n`
+                              : '') +
+                            `• Buffer: 3mm\n` +
+                            `\nTotal Minimum: ${minLength}mm`,
+                          duration: 4000,
+                          position: 'top-center',
+                        });
+                        handleParameterChange('length', minLength);
+                        handleParameterChange('nonCuttingLength', 0);
+                      } else {
+                        handleParameterChange('nonCuttingLength', value - minLength);
+                      }
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Validate on Enter key
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="w-full text-right parameter-input"
+                />
                 
-                {/* Minimum Length Information */}
+                {/* Length Components Information */}
                 <div className="mt-2 p-2 bg-muted rounded-md">
                   <div className="text-xs space-y-1">
-                    <div className="font-medium">Minimum Required Length:</div>
+                    <div className="font-medium">Length Components:</div>
                     <div className="flex justify-between">
-                      <span>• Shank Length:</span>
-                      <span>{parameters.shankLength} mm</span>
+                      <span>• Flute Length (including tip):</span>
+                      <span>{parameters.fluteLength} mm</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>• Flute Length:</span>
-                      <span>{parameters.fluteLength} mm</span>
+                      <span>• Shank Length (after flute):</span>
+                      <span>{parameters.shankLength} mm</span>
                     </div>
                     {Math.abs(parameters.diameter - parameters.shankDiameter) > 0 && (
                       <div className="flex justify-between">
                         <span>• Chamfer Height:</span>
-                        <span>{(Math.abs(parameters.diameter - parameters.shankDiameter) / 2).toFixed(2)} mm</span>
+                        <span>{chamferHeight} mm</span>
                       </div>
                     )}
-                    <div className="flex justify-between font-medium border-t border-border/40 mt-1 pt-1">
-                      <span>Total Minimum:</span>
-                      <span>
-                        {(parameters.shankLength + parameters.fluteLength + 
-                          (Math.abs(parameters.diameter - parameters.shankDiameter) / 2)).toFixed(2)} mm
-                      </span>
+                    <div className="flex justify-between">
+                      <span>• Buffer:</span>
+                      <span>3 mm</span>
                     </div>
-                    {parameters.length > (parameters.shankLength + parameters.fluteLength + 
-                      (Math.abs(parameters.diameter - parameters.shankDiameter) / 2)) && (
-                      <div className="flex justify-between text-muted-foreground border-t border-border/40 mt-1 pt-1">
-                        <span>Additional Non-cutting Length:</span>
-                        <span>
-                          {(parameters.length - (parameters.shankLength + parameters.fluteLength + 
-                            (Math.abs(parameters.diameter - parameters.shankDiameter) / 2))).toFixed(2)} mm
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between">
+                      <span>• Non-cutting Length:</span>
+                      <span>{nonCuttingLength} mm</span>
+                    </div>
+                    <div className="flex justify-between font-medium border-t border-border/40 mt-1 pt-1">
+                      <span>Total Length:</span>
+                      <span>{parameters.length} mm</span>
+                    </div>
+                    <div className="flex justify-between text-primary border-t border-border/40 mt-1 pt-1">
+                      <span>Minimum Required Length:</span>
+                      <span>{minLength} mm</span>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </TabsContent>
 
-              {/* Non-Cutting Length (Now calculated automatically) */}
+          <TabsContent value="features" className="space-y-4">
+            {/* Features parameters */}
+            <div className="p-3 bg-primary/5 rounded-md mb-2">
+              <h3 className="text-sm font-medium mb-2">Feature Parameters</h3>
+              
+              {/* Flute Count */}
+              <div className="space-y-2 mb-3">
+                <Label htmlFor="fluteCount" className="text-sm font-medium">
+                  Number of Flutes
+                </Label>
+                <Select
+                  value={parameters.fluteCount.toString()}
+                  onValueChange={(value) => onParameterChange('fluteCount', parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select number of flutes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Single Flute</SelectItem>
+                    <SelectItem value="2">Two Flutes</SelectItem>
+                    <SelectItem value="3">Three Flutes</SelectItem>
+                    <SelectItem value="4">Four Flutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tip Angle */}
               <div className="space-y-2 mb-3">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="nonCuttingLength" className="text-sm font-medium">
-                    Non-Cutting Length (mm)
+                  <Label htmlFor="tipAngle" className="text-sm font-medium">
+                    Tip Angle (degrees)
                   </Label>
                   <span className="text-xs text-muted-foreground">
-                    {parameters.nonCuttingLength.toFixed(2)} mm
+                    {parameters.tipAngle}°
                   </span>
                 </div>
                 <Input
                   type="number"
-                  value={parameters.nonCuttingLength.toFixed(2)}
-                  readOnly
-                  className="w-full bg-muted"
+                  min={60}
+                  max={180}
+                  value={parameters.tipAngle}
+                  onChange={handleInputChange('tipAngle')}
+                  className="w-full text-right parameter-input"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Automatically adjusted based on overall length
-                </p>
               </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="features" className="space-y-4 animate-fade-in">
-            <div className="space-y-2">
-              <Label htmlFor="fluteCount" className="text-sm font-medium">
-                Number of Flutes
-              </Label>
-              <Select
-                value={parameters.fluteCount.toString()}
-                onValueChange={(value) => handleParameterChange('fluteCount', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select flute count" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 Flute (Reamer)</SelectItem>
-                  <SelectItem value="2">2 Flutes (Standard)</SelectItem>
-                  <SelectItem value="3">3 Flutes (Medium-Hard Materials)</SelectItem>
-                  <SelectItem value="4">4 Flutes (Finishing)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="helix" className="text-sm font-medium">
-                  Helix Angle (degrees)
-                </Label>
-                <span className="text-xs text-muted-foreground">
-                  {parameters.helixAngle}°
-                </span>
-              </div>
-              <div className="flex gap-2 items-center">
-                <Slider
-                  id="helix"
-                  min={10}
-                  max={45}
-                  step={1}
-                  value={[parameters.helixAngle]}
-                  onValueChange={handleSliderChange('helixAngle')}
-                  className="flex-1"
-                />
+              {/* Helix Angle */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="helixAngle" className="text-sm font-medium">
+                    Helix Angle (degrees)
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {parameters.helixAngle}°
+                  </span>
+                </div>
                 <Input
                   type="number"
+                  min={0}
+                  max={60}
                   value={parameters.helixAngle}
                   onChange={handleInputChange('helixAngle')}
-                  className="w-16 text-right parameter-input"
+                  className="w-full text-right parameter-input"
                 />
               </div>
             </div>
             
-            <div className="mt-4 p-3 bg-muted/50 rounded-md">
+            <div className="p-3 bg-primary/5 rounded-md">
               <h4 className="text-sm font-medium mb-2">Technical Notes</h4>
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>• <span className="font-medium">Single Flute:</span> For reaming, simple drilling of soft materials</li>
@@ -544,70 +620,56 @@ const ParameterInput: React.FC<ParameterInputProps> = ({
               </ul>
             </div>
           </TabsContent>
-          
-          <TabsContent value="materials" className="space-y-4 animate-fade-in">
-            <div className="space-y-2">
-              <Label htmlFor="material" className="text-sm font-medium">
-                Material
-              </Label>
-              <Select
-                value={parameters.material}
-                onValueChange={(value: MaterialType) => handleParameterChange('material', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select material" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hss">HSS (High Speed Steel)</SelectItem>
-                  <SelectItem value="carbide">Carbide</SelectItem>
-                  <SelectItem value="cobalt">Cobalt</SelectItem>
-                  <SelectItem value="titanium">Titanium Coated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="surface" className="text-sm font-medium">
-                Surface Finish
-              </Label>
-              <Select
-                value={parameters.surfaceFinish}
-                onValueChange={(value: SurfaceFinishType) => handleParameterChange('surfaceFinish', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select surface finish" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="polished">Polished</SelectItem>
-                  <SelectItem value="black-oxide">Black Oxide</SelectItem>
-                  <SelectItem value="tin">TiN Coated</SelectItem>
-                  <SelectItem value="aln">AlN Coated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="mt-4 p-3 bg-muted/50 rounded-md">
-              <h4 className="text-sm font-medium mb-2">Material Properties</h4>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• <span className="font-medium">HSS:</span> General purpose, good balance of hardness and toughness</li>
-                <li>• <span className="font-medium">Carbide:</span> Higher hardness, better wear resistance, higher speeds</li>
-                <li>• <span className="font-medium">Cobalt:</span> Better heat resistance, for harder materials</li>
-                <li>• <span className="font-medium">Titanium:</span> Improved lubricity, heat resistance, and tool life</li>
-              </ul>
-            </div>
-          </TabsContent>
         </Tabs>
       </CardContent>
       <Separator />
-      <CardFooter className="flex justify-between pt-4">
-        <Button variant="outline" size="sm" onClick={onReset} className="gap-1">
-          <RefreshCw size={14} />
+      <CardFooter className="flex flex-wrap gap-2 justify-between">
+        <Button
+          variant="outline"
+          onClick={onReset}
+          className="dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
+          disabled={isGenerating}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
           Reset
         </Button>
-        <Button onClick={onExport} className="gap-1 btn-primary">
-          <Download size={14} />
-          Export Model
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onExport('dxf')}
+            className="dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
+            disabled={isGenerating}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            DXF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onExport('stl')}
+            className="dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
+            disabled={isGenerating}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            STL
+          </Button>
+          <Button
+            onClick={onGenerateModel}
+            className="dark:bg-blue-600 dark:hover:bg-blue-700"
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Generate
+              </>
+            )}
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
