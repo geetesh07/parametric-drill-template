@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { DrillViewer } from '@/components/DrillViewer';
+import DrillViewer from '@/components/DrillViewer';
 import { Card, CardContent } from '@/components/ui/card';
 
 const StepdrillGenerator = () => {
