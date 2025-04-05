@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -36,7 +37,7 @@ export default defineConfig(({ mode }) => ({
     cors: {
       origin: process.env.NODE_ENV === 'production' 
         ? ['https://drill.ntechnosolution.com/'] 
-        : ['http://localhost:8080', 'http://127.0.0.1:8080', f3ad51aa-0243-4bac-b060-adbf68d4338f.lovableproject.com],
+        : ['http://localhost:8080', 'http://127.0.0.1:8080', 'f3ad51aa-0243-4bac-b060-adbf68d4338f.lovableproject.com'],
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       credentials: true,
       maxAge: 86400,

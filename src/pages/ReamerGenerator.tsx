@@ -1,12 +1,28 @@
 
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { DrillViewer } from '@/components/DrillViewer';
+import DrillViewer from '@/components/DrillViewer';
 import { Card, CardContent } from '@/components/ui/card';
+import { DrillParameters } from '@/types/drill';
 
 const ReamerGenerator = () => {
   const [searchParams] = useSearchParams();
-  const toolType = 'reamer';
+  
+  // Define default parameters for reamer
+  const parameters: DrillParameters = {
+    diameter: 10,
+    length: 90,
+    shankDiameter: 10,
+    shankLength: 40,
+    fluteCount: 6, // Reamers typically have more flutes
+    fluteLength: 50,
+    nonCuttingLength: 0,
+    tipAngle: 170, // Slight angle for reamers
+    helixAngle: 15, // Lower helix angle for reamers
+    material: 'hss',
+    tolerance: 'h6', // Tighter tolerance for reamers
+    surfaceFinish: 'polished'
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -19,7 +35,11 @@ const ReamerGenerator = () => {
       
       <Card>
         <CardContent className="p-0">
-          <DrillViewer toolType={toolType} />
+          <DrillViewer 
+            parameters={parameters}
+            viewMode="3d"
+            wireframe={false}
+          />
         </CardContent>
       </Card>
     </div>
