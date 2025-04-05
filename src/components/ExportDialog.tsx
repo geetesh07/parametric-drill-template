@@ -55,7 +55,11 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
       onClose();
     } catch (error) {
       console.error('Export failed:', error);
-      toast.error(`Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast({
+        title: "Export Failed",
+        description: `Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
     } finally {
       setIsExporting(false);
     }
@@ -166,7 +170,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
               </SelectContent>
             </Select>
             
-            {/* Help button for format instructions */}
             <div className="flex justify-end mt-1">
               <Button 
                 variant="ghost" 
@@ -180,7 +183,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
             </div>
           </div>
           
-          {/* Instructions panel */}
           {showInstructions && (
             <div className="bg-muted/30 p-3 rounded-md text-xs space-y-2 border border-border/40">
               <h4 className="font-medium">Usage Instructions</h4>
