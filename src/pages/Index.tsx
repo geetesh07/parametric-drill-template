@@ -89,8 +89,16 @@ const Index = () => {
   };
 
   // Handle actual export after dialog confirmation
-  const handleExportConfirm = (format: string, filename: string) => {
-    exportDrillModel(parameters, format, filename);
+  const handleExportConfirm = async (format: string, filename: string) => {
+    try {
+      console.log(`Starting export process for ${format} format...`);
+      await exportDrillModel(parameters, format, filename);
+      console.log(`Successfully exported ${format} file`);
+      toast.success(`Successfully exported ${format.toUpperCase()} file`);
+    } catch (error) {
+      console.error(`Export failed for ${format}:`, error);
+      toast.error(`Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   return (

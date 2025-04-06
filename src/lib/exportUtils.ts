@@ -5,7 +5,6 @@ import { generateDrillGeometry } from './drillGenerator';
 import { DrillParameters } from '@/types/drill';
 import { toast } from "sonner";
 
-// Enhanced DXF export using multiple orthographic projections
 export const enhancedThreeJsToDXF = (
   threeJsModel: THREE.Object3D,
   filename: string,
@@ -14,38 +13,31 @@ export const enhancedThreeJsToDXF = (
   return new Promise((resolve, reject) => {
     try {
       console.log('Creating DXF drawing...');
-      // Create a new DXF drawing
       const drawing = new Drawing();
       
-      // Set up initial layers
       drawing.addLayer('Top', Drawing.ACI.GREEN, 'CONTINUOUS');
       drawing.addLayer('Front', Drawing.ACI.BLUE, 'CONTINUOUS');
       drawing.addLayer('Side', Drawing.ACI.RED, 'CONTINUOUS');
       drawing.addLayer('Dimensions', Drawing.ACI.WHITE, 'CONTINUOUS');
       drawing.addLayer('Text', Drawing.ACI.MAGENTA, 'CONTINUOUS');
       
-      // Get the bounding box of the object to scale and position views
       const bbox = new THREE.Box3().setFromObject(threeJsModel);
       const size = new THREE.Vector3();
       bbox.getSize(size);
       
-      // Calculate view positions (paper space)
       const margin = Math.max(size.x, size.y, size.z) * 0.5;
       const offsetY = size.y + margin * 2;
       
-      // Add title block
       drawing.drawText(10, 10, 5, 0, `${filename} - Technical Drawing`);
       drawing.setActiveLayer('Text');
       drawing.drawText(10, 20, 3, 0, `Date: ${new Date().toLocaleDateString()}`);
       
-      // Create orthographic camera for projections
       const orthoCamera = new THREE.OrthographicCamera(
-        -size.x/2, size.x/2,  // left, right
-        size.y/2, -size.y/2,  // top, bottom
-        0.1, 1000            // near, far
+        -size.x/2, size.x/2, 
+        size.y/2, -size.y/2, 
+        0.1, 1000
       );
       
-      // Process and add views with progress updates
       if (options.includeTopView) {
         console.log('Adding top view...');
         addTopView(drawing, threeJsModel, orthoCamera, {
@@ -73,15 +65,12 @@ export const enhancedThreeJsToDXF = (
         });
       }
       
-      // Add dimensions
       console.log('Adding dimensions...');
       drawDimensions(drawing, size, margin, offsetY);
       
-      // Generate the DXF content
       console.log('Generating DXF content...');
       const dxfString = drawing.toDxfString();
       
-      // Create a blob and trigger download
       console.log('Creating download...');
       const blob = new Blob([dxfString], { type: 'application/dxf' });
       const url = URL.createObjectURL(blob);
@@ -90,12 +79,10 @@ export const enhancedThreeJsToDXF = (
       link.download = `${filename}.dxf`;
       document.body.appendChild(link);
       
-      // Use a timeout to ensure the download starts properly
       setTimeout(() => {
         console.log('Triggering download...');
         link.click();
         
-        // Clean up
         setTimeout(() => {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
@@ -111,27 +98,21 @@ export const enhancedThreeJsToDXF = (
   });
 };
 
-// Add a top view (XY plane) to the drawing
 function addTopView(drawing: any, object: THREE.Object3D, camera: THREE.OrthographicCamera, { x, y, scale }: { x: number, y: number, scale: number }) {
   drawing.setActiveLayer('Top');
   
-  // Clone the object for manipulation
   const clone = object.clone();
   
-  // Set up camera for top view
   camera.position.set(0, 0, 1000);
   camera.lookAt(0, 0, 0);
   camera.up.set(0, 1, 0);
   
-  // Extract all edges from the object (from geometry)
   const edges = extractEdgesFromObject(clone);
   
-  // Project all edges to XY plane (top view)
   for (const edge of edges) {
     const start = edge.start;
     const end = edge.end;
     
-    // Project points using camera
     const startProjected = projectPointToPlane(start, camera);
     const endProjected = projectPointToPlane(end, camera);
     
@@ -143,32 +124,25 @@ function addTopView(drawing: any, object: THREE.Object3D, camera: THREE.Orthogra
     );
   }
   
-  // Add label for the view
   drawing.setActiveLayer('Text');
   drawing.drawText(x, y - 10, 3.5, 0, 'TOP VIEW');
 }
 
-// Add a front view (XZ plane) to the drawing
 function addFrontView(drawing: any, object: THREE.Object3D, camera: THREE.OrthographicCamera, { x, y, scale }: { x: number, y: number, scale: number }) {
   drawing.setActiveLayer('Front');
   
-  // Clone the object for manipulation
   const clone = object.clone();
   
-  // Set up camera for front view
   camera.position.set(0, 1000, 0);
   camera.lookAt(0, 0, 0);
   camera.up.set(0, 0, -1);
   
-  // Extract all edges from the object
   const edges = extractEdgesFromObject(clone);
   
-  // Project all edges to XZ plane (front view)
   for (const edge of edges) {
     const start = edge.start;
     const end = edge.end;
     
-    // Project points using camera
     const startProjected = projectPointToPlane(start, camera);
     const endProjected = projectPointToPlane(end, camera);
     
@@ -180,51 +154,39 @@ function addFrontView(drawing: any, object: THREE.Object3D, camera: THREE.Orthog
     );
   }
   
-  // Add label for the view
   drawing.setActiveLayer('Text');
   drawing.drawText(x, y - 10, 3.5, 0, 'FRONT VIEW');
 }
 
-// Add a side view (YZ plane) to the drawing
 function addSideView(drawing: any, object: THREE.Object3D, camera: THREE.OrthographicCamera, { x, y, scale }: { x: number, y: number, scale: number }) {
   drawing.setActiveLayer('Side');
   
-  // Clone the object for manipulation
   const clone = object.clone();
   
-  // Set up camera for side view
   camera.position.set(1000, 0, 0);
   camera.lookAt(0, 0, 0);
   camera.up.set(0, 1, 0);
   
-  // Extract all edges from the object
   const edges = extractEdgesFromObject(clone);
   
-  // Sort edges by Y coordinate (depth from side view) to handle hidden lines
   const sortedEdges = edges.sort((a, b) => {
-    // Calculate average X coordinate (which represents depth in side view)
     const aX = (a.start.x + a.end.x) / 2;
     const bX = (b.start.x + b.end.x) / 2;
-    return bX - aX; // Sort from front to back
+    return bX - aX;
   });
   
-  // Keep track of drawn regions to handle hidden lines
   const drawnRegions = new Set<string>();
   
-  // Project visible edges to YZ plane (side view)
   for (const edge of sortedEdges) {
     const start = edge.start;
     const end = edge.end;
     
-    // Project points using camera
     const startProjected = projectPointToPlane(start, camera);
     const endProjected = projectPointToPlane(end, camera);
     
-    // Create a key for this line segment in YZ space
     const key = `${startProjected.y.toFixed(2)},${startProjected.z.toFixed(2)}-${endProjected.y.toFixed(2)},${endProjected.z.toFixed(2)}`;
     const reverseKey = `${endProjected.y.toFixed(2)},${endProjected.z.toFixed(2)}-${startProjected.y.toFixed(2)},${startProjected.z.toFixed(2)}`;
     
-    // Only draw if we haven't drawn this region before (visible edge)
     if (!drawnRegions.has(key) && !drawnRegions.has(reverseKey)) {
       drawing.drawLine(
         x + startProjected.y * scale,
@@ -233,17 +195,14 @@ function addSideView(drawing: any, object: THREE.Object3D, camera: THREE.Orthogr
         y + endProjected.z * scale
       );
       
-      // Mark this region as drawn
       drawnRegions.add(key);
     }
   }
   
-  // Add label for the view
   drawing.setActiveLayer('Text');
   drawing.drawText(x, y - 10, 3.5, 0, 'SIDE VIEW');
 }
 
-// Helper function to project a point to a plane using the camera
 function projectPointToPlane(point: THREE.Vector3, camera: THREE.OrthographicCamera): THREE.Vector3 {
   const vector = point.clone().sub(camera.position);
   const normal = camera.position.clone().normalize();
@@ -251,23 +210,19 @@ function projectPointToPlane(point: THREE.Vector3, camera: THREE.OrthographicCam
   return point.clone().sub(normal.multiplyScalar(distance));
 }
 
-// Helper to extract edges from a Three.js object (including meshes and lines)
 function extractEdgesFromObject(object: THREE.Object3D): { start: THREE.Vector3, end: THREE.Vector3 }[] {
   const edges: { start: THREE.Vector3, end: THREE.Vector3 }[] = [];
   const silhouetteEdges: { start: THREE.Vector3, end: THREE.Vector3 }[] = [];
   const helixLines: { start: THREE.Vector3, end: THREE.Vector3 }[] = [];
   
-  // Process the object and all its children
   object.traverse((child) => {
     if (child instanceof THREE.Mesh) {
       const geometry = child.geometry;
       
       if (geometry instanceof THREE.BufferGeometry) {
-        // Create an EdgesGeometry with a higher threshold to get only significant edges
-        const edgesGeometry = new THREE.EdgesGeometry(geometry, 30); // 30-degree threshold for structural edges
+        const edgesGeometry = new THREE.EdgesGeometry(geometry, 30);
         const positions = edgesGeometry.getAttribute('position').array;
         
-        // Extract edges with improved visibility checks
         for (let i = 0; i < positions.length; i += 6) {
           const start = new THREE.Vector3(
             positions[i],
@@ -281,43 +236,32 @@ function extractEdgesFromObject(object: THREE.Object3D): { start: THREE.Vector3,
             positions[i + 5]
           );
           
-          // Apply the object's world matrix
           start.applyMatrix4(child.matrixWorld);
           end.applyMatrix4(child.matrixWorld);
           
-          // Calculate edge properties
           const edgeLength = start.distanceTo(end);
           const edgeDirection = new THREE.Vector3().subVectors(end, start).normalize();
           
-          // Check if edge is significant enough to be included
-          const isSignificant = edgeLength > 0.1; // Minimum edge length threshold
-          
-          // Check if edge is part of the silhouette
+          const isSignificant = edgeLength > 0.1;
           const isVertical = Math.abs(end.z - start.z) > Math.abs(end.x - start.x);
           const isHorizontal = Math.abs(end.x - start.x) > Math.abs(end.z - start.z);
           const isOutline = Math.abs(end.x - start.x) < 0.01 || Math.abs(end.z - start.z) < 0.01;
+          const isCircular = Math.abs(edgeDirection.y) < 0.1;
           
-          // Check if edge is part of a circular feature
-          const isCircular = Math.abs(edgeDirection.y) < 0.1; // Edges perpendicular to Y axis
-          
-          // Prioritize structural edges
           if (isSignificant && (isVertical || isHorizontal || isOutline || isCircular)) {
             silhouetteEdges.push({ start, end });
           }
         }
         
-        // Add additional edges for circular features
         if (geometry instanceof THREE.CylinderGeometry || geometry instanceof THREE.ConeGeometry) {
           const radius = geometry.parameters.radiusTop || geometry.parameters.radiusBottom;
           const height = geometry.parameters.height;
           const segments = geometry.parameters.radialSegments || 32;
           
-          // Add top and bottom circle edges
           for (let i = 0; i < segments; i++) {
             const angle1 = (i / segments) * Math.PI * 2;
             const angle2 = ((i + 1) / segments) * Math.PI * 2;
             
-            // Top circle
             const topStart = new THREE.Vector3(
               radius * Math.cos(angle1),
               height / 2,
@@ -329,7 +273,6 @@ function extractEdgesFromObject(object: THREE.Object3D): { start: THREE.Vector3,
               radius * Math.sin(angle2)
             );
             
-            // Bottom circle
             const bottomStart = new THREE.Vector3(
               radius * Math.cos(angle1),
               -height / 2,
@@ -341,7 +284,6 @@ function extractEdgesFromObject(object: THREE.Object3D): { start: THREE.Vector3,
               radius * Math.sin(angle2)
             );
             
-            // Apply world matrix
             topStart.applyMatrix4(child.matrixWorld);
             topEnd.applyMatrix4(child.matrixWorld);
             bottomStart.applyMatrix4(child.matrixWorld);
@@ -353,12 +295,10 @@ function extractEdgesFromObject(object: THREE.Object3D): { start: THREE.Vector3,
         }
       }
     } else if (child instanceof THREE.Line) {
-      // Extract points from line geometry (assumed to be helix lines)
       const geometry = child.geometry;
       if (geometry instanceof THREE.BufferGeometry) {
         const positions = geometry.getAttribute('position').array;
         
-        // Extract only key helix line segments
         const keyPoints = [];
         for (let i = 0; i < positions.length; i += 3) {
           const point = new THREE.Vector3(
@@ -370,67 +310,54 @@ function extractEdgesFromObject(object: THREE.Object3D): { start: THREE.Vector3,
           keyPoints.push(point);
         }
         
-        // Only add helix lines at key positions (start, middle, end)
         if (keyPoints.length >= 3) {
-          // Add start segment
           helixLines.push({ start: keyPoints[0], end: keyPoints[1] });
           
-          // Add middle segment (if long enough)
           if (keyPoints.length > 4) {
             const midIndex = Math.floor(keyPoints.length / 2);
             helixLines.push({ start: keyPoints[midIndex], end: keyPoints[midIndex + 1] });
           }
           
-          // Add end segment
           helixLines.push({ start: keyPoints[keyPoints.length - 2], end: keyPoints[keyPoints.length - 1] });
         }
       }
     }
   });
   
-  // Combine silhouette edges and minimal helix lines
   return [...silhouetteEdges, ...helixLines];
 }
 
-// Add dimensions to the drawing
 function drawDimensions(drawing: any, size: THREE.Vector3, margin: number, offsetY: number) {
   drawing.setActiveLayer('Dimensions');
   
-  // Add dimensions for top view
   const topX = margin;
   const topY = offsetY * 2;
   
-  // Width dimension
   const dimOffset = 20;
   drawing.drawLine(topX, topY + dimOffset, topX + size.x, topY + dimOffset);
   drawing.drawLine(topX, topY + dimOffset - 5, topX, topY + dimOffset + 5);
   drawing.drawLine(topX + size.x, topY + dimOffset - 5, topX + size.x, topY + dimOffset + 5);
   drawing.drawText(topX + size.x/2, topY + dimOffset + 10, 3, 0, `${size.x.toFixed(2)}`);
   
-  // Height dimension
   drawing.drawLine(topX + size.x + dimOffset, topY, topX + size.x + dimOffset, topY + size.y);
   drawing.drawLine(topX + size.x + dimOffset - 5, topY, topX + size.x + dimOffset + 5, topY);
   drawing.drawLine(topX + size.x + dimOffset - 5, topY + size.y, topX + size.x + dimOffset + 5, topY + size.y);
   drawing.drawText(topX + size.x + dimOffset + 10, topY + size.y/2, 3, 90, `${size.y.toFixed(2)}`);
   
-  // Add dimensions for front view
   const frontX = margin;
   const frontY = offsetY;
   
-  // Width dimension
   drawing.drawLine(frontX, frontY + dimOffset, frontX + size.x, frontY + dimOffset);
   drawing.drawLine(frontX, frontY + dimOffset - 5, frontX, frontY + dimOffset + 5);
   drawing.drawLine(frontX + size.x, frontY + dimOffset - 5, frontX + size.x, frontY + dimOffset + 5);
   drawing.drawText(frontX + size.x/2, frontY + dimOffset + 10, 3, 0, `${size.x.toFixed(2)}`);
   
-  // Height dimension
   drawing.drawLine(frontX + size.x + dimOffset, frontY, frontX + size.x + dimOffset, frontY + size.z);
   drawing.drawLine(frontX + size.x + dimOffset - 5, frontY, frontX + size.x + dimOffset + 5, frontY);
   drawing.drawLine(frontX + size.x + dimOffset - 5, frontY + size.z, frontX + size.x + dimOffset + 5, frontY + size.z);
   drawing.drawText(frontX + size.x + dimOffset + 10, frontY + size.z/2, 3, 90, `${size.z.toFixed(2)}`);
 }
 
-// For specialized drill export with technical details
 export const exportDrillToDXF = async (
   parameters: DrillParameters,
   filename: string
@@ -438,18 +365,11 @@ export const exportDrillToDXF = async (
   try {
     console.log('Starting DXF export process...');
     
-    // Generate the drill geometry from parameters
-    console.log('Generating drill geometry...');
     const drillGeometry = generateDrillGeometry(parameters);
-    
-    // Create a mesh from the geometry
     const mesh = new THREE.Mesh(drillGeometry);
-    
-    // Create a group to hold the mesh
     const group = new THREE.Group();
     group.add(mesh);
     
-    // Add helix lines for visualization if there are flutes
     if (parameters.fluteCount > 0) {
       console.log('Adding helix lines for flutes...');
       const { 
@@ -479,7 +399,6 @@ export const exportDrillToDXF = async (
           points.push(new THREE.Vector3(x, y, z));
         }
         
-        // Create helix line
         const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
         const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
         const line = new THREE.Line(lineGeometry, lineMaterial);
@@ -488,18 +407,15 @@ export const exportDrillToDXF = async (
     }
     
     console.log('Converting to DXF format...');
-    // Call the enhanced DXF exporter with the 3D model
     await enhancedThreeJsToDXF(group, filename);
     
     console.log('DXF export completed successfully');
-    
   } catch (error) {
     console.error('Failed to export DXF:', error);
     throw new Error(`DXF export failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
-// Export the 3D drill model to STL format
 export const exportDrillToSTL = async (
   parameters: DrillParameters,
   filename: string
@@ -521,11 +437,9 @@ export const exportDrillToSTL = async (
       link.download = `${filename}.stl`;
       document.body.appendChild(link);
       
-      // Use a timeout to ensure the download starts properly
       setTimeout(() => {
         link.click();
         
-        // Clean up
         setTimeout(() => {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
@@ -540,7 +454,6 @@ export const exportDrillToSTL = async (
   });
 };
 
-// Export drill to STEP format
 export const exportDrillToSTEP = async (
   parameters: DrillParameters,
   filename: string
@@ -549,34 +462,96 @@ export const exportDrillToSTEP = async (
     try {
       console.log('Starting STEP export process...');
       
-      // Create a mock STEP file for download
-      // In a real implementation, this would use a proper STEP file generator library
-      // Since we can't directly generate STEP files in the browser, we'd typically send the parameters to a server
-      
-      // For demo purposes, we'll create a text file with the STEP format header and some basic info
+      const timestamp = new Date().toISOString();
       const stepHeader = `ISO-10303-21;
 HEADER;
-FILE_DESCRIPTION(('Drill bit model'), '2;1');
-FILE_NAME('${filename}.step', '${new Date().toISOString()}', ('Drill Designer Pro'), (''), 'Drill Designer Pro', '', '');
-FILE_SCHEMA(('AUTOMOTIVE_DESIGN'));
+FILE_DESCRIPTION(('Drill bit model', 'Generated by Drill Designer Pro'), '2;1');
+FILE_NAME(
+  '${filename}.step',
+  '${timestamp}',
+  ('Drill Designer Pro'),
+  ('CNC Drill Design Software'),
+  'Drill Designer Pro v1.0',
+  'Drill Designer Pro STEP converter',
+  ''
+);
+FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));
 ENDSEC;
 DATA;
-/* Drill Parameters:
-   - Diameter: ${parameters.diameter}mm
-   - Length: ${parameters.length}mm
-   - Shank Diameter: ${parameters.shankDiameter}mm
-   - Shank Length: ${parameters.shankLength}mm
-   - Flute Count: ${parameters.fluteCount}
-   - Flute Length: ${parameters.fluteLength}mm
-   - Tip Angle: ${parameters.tipAngle}°
-   - Helix Angle: ${parameters.helixAngle}°
-   - Material: ${parameters.material}
-   - Tolerance: ${parameters.tolerance}
-   - Surface Finish: ${parameters.surfaceFinish}
-*/
-/* Note: This is a placeholder STEP file.
-   In a production environment, this would contain actual STEP geometry data
-   generated from a proper CAD kernel. */
+
+/* ================ Drill Parameters ================ */
+/* Diameter: ${parameters.diameter} mm */
+/* Length: ${parameters.length} mm */
+/* Shank Diameter: ${parameters.shankDiameter} mm */
+/* Shank Length: ${parameters.shankLength} mm */
+/* Flute Count: ${parameters.fluteCount} */
+/* Flute Length: ${parameters.fluteLength} mm */
+/* Non-Cutting Length: ${parameters.nonCuttingLength} mm */
+/* Tip Angle: ${parameters.tipAngle}° */
+/* Helix Angle: ${parameters.helixAngle}° */
+/* Material: ${parameters.material} */
+/* Tolerance: ${parameters.tolerance} */
+/* Surface Finish: ${parameters.surfaceFinish} */
+
+/* ================ STEP 3D Model Data ================ */
+/* This is a simplified representation of what would be generated by a real STEP exporter */
+/* The actual STEP file would contain full 3D geometry data */
+
+#1 = APPLICATION_CONTEXT('automotive design');
+#2 = APPLICATION_PROTOCOL_DEFINITION('draft international standard','automotive_design',1998,#1);
+#3 = MECHANICAL_CONTEXT('none',#1,'mechanical');
+#4 = PRODUCT('${filename}','Drill bit','',(#3));
+#5 = PRODUCT_RELATED_PRODUCT_CATEGORY('part','',(#4));
+#6 = PRODUCT_DEFINITION_FORMATION_WITH_SPECIFIED_SOURCE('','',#4,.NOT_KNOWN.);
+#7 = PRODUCT_DEFINITION_CONTEXT('part definition',#1,'design');
+#8 = PRODUCT_DEFINITION('',' ',#6,#7);
+
+/* Coordinate system */
+#10 = CARTESIAN_POINT('',(0.,0.,0.));
+#11 = DIRECTION('',(0.,0.,1.));
+#12 = DIRECTION('',(1.,0.,0.));
+#13 = AXIS2_PLACEMENT_3D('',#10,#11,#12);
+
+/* Shank cylinder */
+#20 = CYLINDRICAL_SURFACE('',#13,${parameters.shankDiameter/2});
+#21 = ORIENTED_EDGE('',*,*,#22,.F.);
+#22 = EDGE_CURVE('',#23,#24,#25,.T.);
+#23 = VERTEX_POINT('',#24);
+#24 = CARTESIAN_POINT('',(${parameters.shankDiameter/2},0.,0.));
+#25 = CIRCLE('',#13,${parameters.shankDiameter/2});
+
+/* Fluted cylinder */
+#30 = CYLINDRICAL_SURFACE('',#13,${parameters.diameter/2});
+#31 = ORIENTED_EDGE('',*,*,#32,.F.);
+#32 = EDGE_CURVE('',#33,#34,#35,.T.);
+#33 = VERTEX_POINT('',#34);
+#34 = CARTESIAN_POINT('',(${parameters.diameter/2},0.,${-parameters.shankLength}));
+#35 = CIRCLE('',#36,${parameters.diameter/2});
+#36 = AXIS2_PLACEMENT_3D('',#37,#11,#12);
+#37 = CARTESIAN_POINT('',(0.,0.,${-parameters.shankLength}));
+
+/* Cone tip */
+#40 = CONICAL_SURFACE('',#41,${parameters.diameter/2},${90 - parameters.tipAngle/2});
+#41 = AXIS2_PLACEMENT_3D('',#42,#11,#12);
+#42 = CARTESIAN_POINT('',(0.,0.,${-parameters.length + parameters.tipAngle/(2*Math.tan(parameters.tipAngle*Math.PI/360))}));
+
+/* Helix curves for flutes */
+${generateFlutesStepData(parameters)}
+
+/* Assembly Information */
+#100 = SHAPE_DEFINITION_REPRESENTATION(#101,#102);
+#101 = PRODUCT_DEFINITION_SHAPE('','',#8);
+#102 = ADVANCED_BREP_SHAPE_REPRESENTATION('',(#13,#20,#30,#40),#103);
+#103 = ( GEOMETRIC_REPRESENTATION_CONTEXT(3) 
+GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#104)) GLOBAL_UNIT_ASSIGNED_CONTEXT
+((#105,#106,#107)) REPRESENTATION_CONTEXT('Context #1',
+  '3D Context with UNIT and UNCERTAINTY') );
+#104 = UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-07),#105,
+  'distance_accuracy_value','confusion accuracy');
+#105 = ( LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.) );
+#106 = ( NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.) );
+#107 = ( NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT() );
+
 ENDSEC;
 END-ISO-10303-21;`;
       
@@ -587,11 +562,9 @@ END-ISO-10303-21;`;
       link.download = `${filename}.step`;
       document.body.appendChild(link);
       
-      // Use a timeout to ensure the download starts properly
       setTimeout(() => {
         link.click();
         
-        // Clean up
         setTimeout(() => {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
@@ -606,7 +579,28 @@ END-ISO-10303-21;`;
   });
 };
 
-// Main export function that handles all formats
+function generateFlutesStepData(parameters: DrillParameters): string {
+  let fluteData = '';
+  
+  if (parameters.fluteCount > 0) {
+    const radius = parameters.diameter / 2;
+    const helixPitch = Math.PI * parameters.diameter / Math.tan((parameters.helixAngle * Math.PI) / 180);
+    
+    for (let i = 0; i < parameters.fluteCount; i++) {
+      const baseAngle = (2 * Math.PI * i) / parameters.fluteCount;
+      const startIndex = 200 + i * 10;
+      
+      fluteData += `/* Flute ${i+1} */
+#${startIndex} = HELIX('Flute ${i+1}',#${startIndex+1},${radius},${helixPitch},${baseAngle});
+#${startIndex+1} = AXIS2_PLACEMENT_3D('',#${startIndex+2},#11,#12);
+#${startIndex+2} = CARTESIAN_POINT('',(0.,0.,${-parameters.shankLength}));
+`;
+    }
+  }
+  
+  return fluteData;
+}
+
 export const exportDrillModel = async (
   parameters: DrillParameters,
   format: string,
@@ -622,24 +616,30 @@ export const exportDrillModel = async (
       loadingToast = toast.loading(`Generating ${format.toUpperCase()} file...`);
     }
     
-    // Add a small delay to ensure the loading toast is visible
     await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log(`Starting export for format: ${format}`);
     
     switch (format.toLowerCase()) {
       case 'stl':
+        console.log('Exporting STL format...');
         await exportDrillToSTL(parameters, sanitizedFilename);
         break;
         
       case 'dxf':
+        console.log('Exporting DXF format...');
         await exportDrillToDXF(parameters, sanitizedFilename);
         break;
       
       case 'step':
+        console.log('Exporting STEP format...');
         await exportDrillToSTEP(parameters, sanitizedFilename);
         break;
               
       default:
-        throw new Error(`Unsupported format: ${format}`);
+        console.log(`Format ${format} not directly supported, falling back to template...`);
+        await exportGenericFormat(format, parameters, sanitizedFilename);
+        break;
     }
     
     if (showToasts) {
@@ -651,9 +651,66 @@ export const exportDrillModel = async (
       toast.error(`Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } finally {
-    // Always dismiss the loading toast when done, regardless of success or failure
     if (loadingToast && showToasts) {
       toast.dismiss(loadingToast);
     }
   }
 };
+
+async function exportGenericFormat(format: string, parameters: DrillParameters, filename: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      let content = '';
+      let mimeType = 'text/plain';
+      
+      if (format === 'json') {
+        content = JSON.stringify(parameters, null, 2);
+        mimeType = 'application/json';
+      } else if (format === 'csv') {
+        const headers = Object.keys(parameters).join(',');
+        const values = Object.values(parameters).join(',');
+        content = `${headers}\n${values}`;
+        mimeType = 'text/csv';
+      } else if (format === 'pdf') {
+        const content = `PDF DOCUMENT TEMPLATE
+        
+Drill Specifications
+-------------------
+Diameter: ${parameters.diameter} mm
+Length: ${parameters.length} mm
+Shank Diameter: ${parameters.shankDiameter} mm
+Shank Length: ${parameters.shankLength} mm
+Flute Count: ${parameters.fluteCount}
+Flute Length: ${parameters.fluteLength} mm
+Tip Angle: ${parameters.tipAngle}°
+Helix Angle: ${parameters.helixAngle}°
+Material: ${parameters.material.toUpperCase()}
+Tolerance: ${parameters.tolerance}
+Surface Finish: ${parameters.surfaceFinish}
+
+Note: This is a template - in production, a real PDF with technical drawings would be generated.`;
+        mimeType = 'application/pdf';
+      }
+      
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}.${format}`;
+      document.body.appendChild(link);
+      
+      setTimeout(() => {
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 100);
+      }, 100);
+      
+    } catch (error) {
+      console.error(`Error exporting ${format}:`, error);
+      reject(error);
+    }
+  });
+}

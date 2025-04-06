@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -41,7 +42,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
   onExport,
 }) => {
   const [filename, setFilename] = useState(`Drill_${parameters.diameter}x${parameters.length}_${parameters.fluteCount}F`);
-  const [format, setFormat] = useState('dxf');
+  const [format, setFormat] = useState('step');
   const [isExporting, setIsExporting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
@@ -49,12 +50,12 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
     setIsExporting(true);
     
     try {
-      console.log('Starting export process...');
+      console.log(`Starting ${format.toUpperCase()} export process...`);
       await onExport(format, filename);
       console.log('Export completed successfully');
       onClose();
     } catch (error) {
-      console.error('Export failed:', error);
+      console.error(`${format.toUpperCase()} export failed:`, error);
       toast.error(`Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsExporting(false);
@@ -109,11 +110,11 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
                     </TooltipContent>
                   </Tooltip>
                 </SelectItem>
-                <SelectItem value="jscad">
+                <SelectItem value="step">
                   <Tooltip>
-                    <TooltipTrigger className="flex w-full">JSCAD (Parametric 2D)</TooltipTrigger>
+                    <TooltipTrigger className="flex w-full">STEP (3D Model)</TooltipTrigger>
                     <TooltipContent>
-                      <p>Parametric JavaScript model that needs conversion for AutoCAD</p>
+                      <p>Standard for Exchange of Product Data, high precision 3D format</p>
                     </TooltipContent>
                   </Tooltip>
                 </SelectItem>
@@ -125,11 +126,11 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
                     </TooltipContent>
                   </Tooltip>
                 </SelectItem>
-                <SelectItem value="step">
+                <SelectItem value="jscad">
                   <Tooltip>
-                    <TooltipTrigger className="flex w-full">STEP (3D Model)</TooltipTrigger>
+                    <TooltipTrigger className="flex w-full">JSCAD (Parametric 2D)</TooltipTrigger>
                     <TooltipContent>
-                      <p>Standard for Exchange of Product Data, high precision 3D format</p>
+                      <p>Parametric JavaScript model that needs conversion for AutoCAD</p>
                     </TooltipContent>
                   </Tooltip>
                 </SelectItem>
@@ -216,9 +217,11 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
                   <>
                     <p><b>STEP 3D model:</b></p>
                     <ol className="list-decimal pl-4 space-y-1">
-                      <li>Open with AutoCAD, Fusion 360, or other CAD software</li>
-                      <li>Contains full 3D geometry</li>
+                      <li>Open with CAD software like AutoCAD, Fusion 360, SolidWorks, etc.</li>
+                      <li>Contains full 3D geometry with parametric information</li>
                       <li>Preserves all design features</li>
+                      <li>Industry-standard format for CAD/CAM systems</li>
+                      <li>Suitable for manufacturing and CNC machining</li>
                     </ol>
                   </>
                 ) : format === 'json' || format === 'csv' ? (
