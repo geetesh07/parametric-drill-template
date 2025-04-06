@@ -540,6 +540,71 @@ export const exportDrillToSTL = async (
   });
 };
 
+// Export drill to STEP format
+export const exportDrillToSTEP = async (
+  parameters: DrillParameters,
+  filename: string
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log('Starting STEP export process...');
+      
+      // Create a mock STEP file for download
+      // In a real implementation, this would use a proper STEP file generator library
+      // Since we can't directly generate STEP files in the browser, we'd typically send the parameters to a server
+      
+      // For demo purposes, we'll create a text file with the STEP format header and some basic info
+      const stepHeader = `ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Drill bit model'), '2;1');
+FILE_NAME('${filename}.step', '${new Date().toISOString()}', ('Drill Designer Pro'), (''), 'Drill Designer Pro', '', '');
+FILE_SCHEMA(('AUTOMOTIVE_DESIGN'));
+ENDSEC;
+DATA;
+/* Drill Parameters:
+   - Diameter: ${parameters.diameter}mm
+   - Length: ${parameters.length}mm
+   - Shank Diameter: ${parameters.shankDiameter}mm
+   - Shank Length: ${parameters.shankLength}mm
+   - Flute Count: ${parameters.fluteCount}
+   - Flute Length: ${parameters.fluteLength}mm
+   - Tip Angle: ${parameters.tipAngle}°
+   - Helix Angle: ${parameters.helixAngle}°
+   - Material: ${parameters.material}
+   - Tolerance: ${parameters.tolerance}
+   - Surface Finish: ${parameters.surfaceFinish}
+*/
+/* Note: This is a placeholder STEP file.
+   In a production environment, this would contain actual STEP geometry data
+   generated from a proper CAD kernel. */
+ENDSEC;
+END-ISO-10303-21;`;
+      
+      const blob = new Blob([stepHeader], { type: 'application/step' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${filename}.step`;
+      document.body.appendChild(link);
+      
+      // Use a timeout to ensure the download starts properly
+      setTimeout(() => {
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          console.log('Successfully exported STEP file');
+          resolve();
+        }, 100);
+      }, 100);
+    } catch (error) {
+      console.error('Error generating STEP file:', error);
+      reject(error);
+    }
+  });
+};
 
 // Main export function that handles all formats
 export const exportDrillModel = async (
@@ -568,6 +633,10 @@ export const exportDrillModel = async (
       case 'dxf':
         await exportDrillToDXF(parameters, sanitizedFilename);
         break;
+      
+      case 'step':
+        await exportDrillToSTEP(parameters, sanitizedFilename);
+        break;
               
       default:
         throw new Error(`Unsupported format: ${format}`);
@@ -587,4 +656,4 @@ export const exportDrillModel = async (
       toast.dismiss(loadingToast);
     }
   }
-}; 
+};

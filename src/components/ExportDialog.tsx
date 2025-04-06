@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/tooltip';
 import { DrillParameters } from '@/types/drill';
 import { generateAutoCADInstructions } from '@/lib/specGenerator';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from "sonner";
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -55,11 +55,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
       onClose();
     } catch (error) {
       console.error('Export failed:', error);
-      toast({
-        title: "Export Failed",
-        description: `Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
+      toast.error(`Failed to export ${format.toUpperCase()}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsExporting(false);
     }
